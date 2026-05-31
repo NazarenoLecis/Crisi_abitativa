@@ -1,3 +1,4 @@
+from pathlib import Path
 import time
 import pandas as pd
 import pycountry
@@ -149,3 +150,95 @@ def stampa_ultimi_valori(frame):
     ultimi = frame.sort_values("time_period").groupby(["indicator_id", "country_code"]).tail(1)
     colonne = ["indicator_name", "country_code", "time_period", "value", "unit", "source"]
     return ultimi[colonne].sort_values(["indicator_name", "country_code"])
+
+
+def cartella_summary(cartella_output, fonte, sezione=None):
+    radice_output = Path(cartella_output)
+    if radice_output.name == "charts":
+        radice_summary = radice_output.parent / "summary"
+    else:
+        radice_summary = radice_output / "summary"
+
+    parti = [radice_summary, fonte]
+    if sezione:
+        parti.append(sezione)
+
+    cartella = Path(*parti)
+    cartella.mkdir(parents=True, exist_ok=True)
+    return cartella
+
+
+def crea_min_max_summary(frame, paesi_esclusi=None, min_paesi=1):
+    colonne_vuote = [
+        "time_period",
+        "data_plot",
+        "min_country",
+        "min_value",
+        "max_country",
+        "max_value",
+        "countries_count",
+        "italy_value",
+        "eu27_value",
+    ]
+    if frame.empty:
+        return pd.DataFrame(columns=colonne_vuote)
+
+    paesi_esclusi = set(paesi_esclusi or [])
+    dati = frame.dropna(subset=["country_code", "data_plot", "value"]).copy()
+    dati["value"] = pd.to_numeric(dati["value"], errors="coerce")
+    dati = dati.dropna(subset=["value"])
+    paesi = dati.loc[~dati["country_code"].isin(paesi_esclusi)].copy()
+    if paesi.empty:
+        return pd.DataFrame(columns=colonne_vuote)
+
+    righe = []
+    for data_plot, gruppo in paesi.groupby("data_plot"):
+        gruppo = gruppo.sort_values(["value", "country_code"]).copy()
+        if len(gruppo) < min_paesi:
+            continue
+
+        minimo = gruppo.iloc[0]
+        massimo = gruppo.iloc[-1]
+        righe.append(
+            {
+                "time_period": minimo["time_period"],
+                "data_plot": data_plot,
+                "min_country": minimo["country_code"],
+                "min_value": float(minimo["value"]),
+                "max_country": massimo["country_code"],
+                "max_value": float(massimo["value"]),
+                "countries_count": int(len(gruppo)),
+            }
+        )
+
+    summary = pd.DataFrame(righe)
+    if summary.empty:
+        return pd.DataFrame(columns=colonne_vuote)
+
+    valori_italia = dati.loc[dati["country_code"] == "ITA", ["data_plot", "value"]].rename(columns={"value": "italy_value"})
+    valori_eu27 = dati.loc[dati["country_code"] == "EU27_2020", ["data_plot", "value"]].rename(columns={"value": "eu27_value"})
+    summary = summary.merge(valori_italia, on="data_plot", how="left")
+    summary = summary.merge(valori_eu27, on="data_plot", how="left")
+    return summary[colonne_vuote].sort_values("data_plot")
+
+
+def salva_min_max_summary(frame, cartella_output, fonte, sezione, nome_file, paesi_esclusi=None, min_paesi=1):
+    summary = crea_min_max_summary(frame, paesi_esclusi=paesi_esclusi, min_paesi=min_paesi)
+    if summary.empty:
+        return None, summary
+
+    output = summary.copy()
+    output["data_plot"] = pd.to_datetime(output["data_plot"]).dt.strftime("%Y-%m-%d")
+    percorso = cartella_summary(cartella_output, fonte, sezione) / f"{Path(nome_file).stem}_min_max.csv"
+    output.to_csv(percorso, index=False)
+    return percorso, summary
+
+
+def testo_min_max_ultimo_periodo(summary, suffisso="", decimali=1):
+    if summary.empty:
+        return ""
+
+    ultimo = summary.sort_values("data_plot").iloc[-1]
+    min_value = f"{ultimo['min_value']:.{decimali}f}{suffisso}"
+    max_value = f"{ultimo['max_value']:.{decimali}f}{suffisso}"
+    return f"Ultimo periodo ({ultimo['time_period']}): min {ultimo['min_country']} {min_value} | max {ultimo['max_country']} {max_value}"

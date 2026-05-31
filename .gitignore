@@ -21,6 +21,8 @@ dist/
 # Generated outputs
 outputs/charts/*.png
 outputs/charts/**/*.png
+outputs/summary/*.csv
+outputs/summary/**/*.csv
 
 # OS files
 .DS_Store

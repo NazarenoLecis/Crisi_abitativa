@@ -8,6 +8,7 @@ import pandas as pd
 from config import EU27_CODES
 from grafici_oecd import scarica_prezzi_case_oecd
 from grafici import (
+    aggiungi_nota_min_max,
     COLORE_BANDA,
     COLORE_EU27,
     COLORE_ITALIA,
@@ -17,7 +18,16 @@ from grafici import (
     periodo_comune,
     periodo_to_datetime,
 )
-from utils import EUROSTAT_BASE_URL, WATERMARK, codice_paese_iso3, jsonstat_to_dataframe, scarica_bytes, scarica_json
+from utils import (
+    EUROSTAT_BASE_URL,
+    WATERMARK,
+    codice_paese_iso3,
+    jsonstat_to_dataframe,
+    salva_min_max_summary,
+    scarica_bytes,
+    scarica_json,
+    testo_min_max_ultimo_periodo,
+)
 
 
 AMECO_CAPITOLO_URL = "https://ec.europa.eu/economy_finance/db_indicators/ameco/documents/ameco{capitolo}.zip"
@@ -256,20 +266,21 @@ def prepara_banda(frame, inizio=None, fine=None):
     italia = serie.loc[serie["country_code"] == "ITA"].copy()
     eu27 = serie.loc[serie["country_code"] == "EU27_2020"].copy()
     if italia.empty or eu27.empty:
-        return pd.DataFrame(), italia, eu27
+        return pd.DataFrame(), italia, eu27, pd.DataFrame()
 
     periodo = periodo_comune(italia, eu27)
     if periodo is None:
-        return pd.DataFrame(), italia, eu27
+        return pd.DataFrame(), italia, eu27, pd.DataFrame()
 
     data_inizio, data_fine = periodo
     paesi = paesi.loc[(paesi["data_plot"] >= data_inizio) & (paesi["data_plot"] <= data_fine)]
     italia = italia.loc[(italia["data_plot"] >= data_inizio) & (italia["data_plot"] <= data_fine)]
     eu27 = eu27.loc[(eu27["data_plot"] >= data_inizio) & (eu27["data_plot"] <= data_fine)]
+    serie_summary = pd.concat([paesi, eu27], ignore_index=True)
     banda = paesi.groupby("data_plot")["value"].agg(["min", "max", "count"]).reset_index()
     banda = banda.loc[banda["count"] >= 8].copy()
     banda["data_num"] = mdates.date2num(banda["data_plot"].to_numpy(dtype="datetime64[ms]"))
-    return banda, italia, eu27
+    return banda, italia, eu27, serie_summary
 
 
 def disegna_banda_linee(asse, banda, italia, eu27, percentuale=False):
@@ -372,9 +383,19 @@ def grafico_banda_europeo(dataset_code, filtri, titolo, nome_file, cartella_outp
     if dati.empty:
         return None
 
-    banda, italia, eu27 = prepara_banda(dati, inizio=inizio, fine=fine)
+    banda, italia, eu27, serie_summary = prepara_banda(dati, inizio=inizio, fine=fine)
     if italia.empty or eu27.empty:
         return None
+
+    _, summary_min_max = salva_min_max_summary(
+        serie_summary,
+        cartella_output,
+        "eurostat",
+        "confronti",
+        nome_file,
+        paesi_esclusi={"EU27_2020", "EU", "EA20", "EA19"},
+        min_paesi=8,
+    )
 
     figura, asse = plt.subplots(figsize=(9.2, 5.5))
     disegna_banda_linee(asse, banda, italia, eu27, percentuale=percentuale)
@@ -386,6 +407,7 @@ def grafico_banda_europeo(dataset_code, filtri, titolo, nome_file, cartella_outp
         formatta_anni_brevi(asse, serie_asse)
     annota_ultimo_valore(asse, italia, suffisso="%" if percentuale else "", decimali=1)
     annota_ultimo_valore(asse, eu27, suffisso="%" if percentuale else "", decimali=1)
+    aggiungi_nota_min_max(asse, testo_min_max_ultimo_periodo(summary_min_max))
     aggiungi_legenda_figura(figura, asse, colonne=2)
     aggiungi_footer_grafici_europei(figura, f"Eurostat ({dataset_code})")
 
@@ -575,9 +597,20 @@ def grafico_overburden_inquilini(cartella_output):
     if dati.empty:
         return None
 
-    banda, italia, eu27 = prepara_banda(dati)
+    banda, italia, eu27, serie_summary = prepara_banda(dati)
     if italia.empty or eu27.empty:
         return None
+
+    nome_file = "italia_ue_sovraccarico_costi_inquilini.png"
+    _, summary_min_max = salva_min_max_summary(
+        serie_summary,
+        cartella_output,
+        "eurostat",
+        "confronti",
+        nome_file,
+        paesi_esclusi={"EU27_2020", "EU", "EA20", "EA19"},
+        min_paesi=8,
+    )
 
     figura, asse = plt.subplots(figsize=(9.2, 5.5))
     disegna_banda_linee(asse, banda, italia, eu27, percentuale=True)
@@ -585,10 +618,11 @@ def grafico_overburden_inquilini(cartella_output):
     serie_asse = pd.concat([italia, eu27], ignore_index=True)
     formatta_anni_brevi(asse, serie_asse)
     asse.set_ylim(0, max(80, banda["max"].max() * 1.05 if not banda.empty else 80))
+    aggiungi_nota_min_max(asse, testo_min_max_ultimo_periodo(summary_min_max))
     aggiungi_legenda_figura(figura, asse, colonne=2)
     aggiungi_footer_grafici_europei(figura, "Eurostat ad hoc extraction (based on ilc_lvho07c and ilc_lvho02)")
 
-    percorso = cartella_grafici_europei(cartella_output) / "italia_ue_sovraccarico_costi_inquilini.png"
+    percorso = cartella_grafici_europei(cartella_output) / nome_file
     salva_grafico_europeo(figura, percorso)
     return percorso
 

@@ -3,7 +3,7 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter, ScalarFormatter
 import pandas as pd
-from utils import WATERMARK, latest_by_country, testo_fonte
+from utils import WATERMARK, latest_by_country, salva_min_max_summary, testo_fonte, testo_min_max_ultimo_periodo
 
 
 COLORE_PRINCIPALE = "#0D3B66"
@@ -81,6 +81,23 @@ def formatta_asse_y(asse, percentuale=False):
     formatter.set_scientific(False)
     asse.yaxis.set_major_formatter(formatter)
     asse.ticklabel_format(axis="y", style="plain", useOffset=False)
+
+
+def aggiungi_nota_min_max(asse, testo):
+    if not testo:
+        return
+
+    asse.text(
+        0.01,
+        0.97,
+        testo,
+        transform=asse.transAxes,
+        ha="left",
+        va="top",
+        fontsize=9,
+        color="#333333",
+        bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.78, "boxstyle": "round,pad=0.25"},
+    )
 
 
 def periodo_to_datetime(periodo):
@@ -266,6 +283,15 @@ def grafico_ue_banda(frame, indicatore, nome_file, cartella_output="outputs/char
 
     banda = paesi.groupby("data_plot")["value"].agg(["min", "max"]).reset_index()
     banda["data_num"] = mdates.date2num(banda["data_plot"].to_numpy(dtype="datetime64[ms]"))
+    _, summary_min_max = salva_min_max_summary(
+        pd.concat([paesi, eu27], ignore_index=True),
+        cartella_output,
+        "eurostat",
+        "confronti",
+        nome_file,
+        paesi_esclusi=CODICI_AGGREGATI,
+        min_paesi=8,
+    )
 
     figura, asse = plt.subplots(figsize=(11, 6))
     asse.fill_between(
@@ -286,6 +312,7 @@ def grafico_ue_banda(frame, indicatore, nome_file, cartella_output="outputs/char
     asse.legend(loc="best", frameon=False)
     serie_asse = unisci_serie_per_asse([italia, eu27])
     formatta_asse_date(asse, serie_asse)
+    aggiungi_nota_min_max(asse, testo_min_max_ultimo_periodo(summary_min_max))
     aggiungi_footer(figura, serie)
 
     percorso = cartella_fonte(cartella_output, "eurostat", "confronti") / nome_file

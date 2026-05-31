@@ -63,6 +63,9 @@ I grafici vengono salvati in sottocartelle di `outputs/charts/`:
 - `outputs/charts/oecd/confronti/`
 - `outputs/charts/banca_italia/`
 
+I grafici con banda min-max salvano anche un CSV in `outputs/summary/` con paese minimo,
+paese massimo, valore Italia ed eventuale valore EU27 per ogni periodo.
+
 I grafici riportano sempre fonte e dicitura in basso a sinistra:
 
 ```text
