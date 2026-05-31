@@ -101,7 +101,9 @@ Shortage e offerta:
 - permessi residenziali in m2 per 1.000 abitanti;
 - produzione nelle costruzioni;
 - investimenti in abitazioni;
-- stock abitativo e periodo di costruzione dal censimento Eurostat 2021.
+- stock abitativo, abitazioni occupate/non occupate e periodo di costruzione dal censimento Eurostat 2021;
+- abitazioni per 1.000 abitanti e abitazioni per famiglia privata;
+- quote di stock costruito prima del 1981 e dal 2001 in poi.
 
 ## File
 

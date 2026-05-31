@@ -225,12 +225,54 @@ Lo stock abitativo del censimento misura il numero di abitazioni convenzionali e
 Nel progetto:
 
 - `estat_dwellings_total_2021`
+- `estat_dwellings_occupied_2021`
+- `estat_dwellings_unoccupied_2021`
 - `estat_dwellings_built_before_1919_2021`
 - `estat_dwellings_built_1919_1945_2021`
 - `estat_dwellings_built_1946_1960_2021`
 - `estat_dwellings_built_1961_1980_2021`
+- `estat_dwellings_built_1981_2000_2021`
+- `estat_dwellings_built_2001_2010_2021`
+- `estat_dwellings_built_2011_2015_2021`
+- `estat_dwellings_built_after_2016_2021`
+- `estat_dwellings_built_unknown_2021`
+
+Nel grafico sullo stock italiano le abitazioni sono raggruppate per periodo di costruzione. Nei confronti tra paesi vengono usate anche quote sintetiche, come la quota di stock costruita prima del 1981 e quella costruita dal 2001 in poi.
 
 Limite: il censimento fotografa lo stock in un anno specifico; non misura direttamente qualita', efficienza energetica, localizzazione rispetto ai posti di lavoro o disponibilita' sul mercato.
+
+### Abitazioni non occupate
+
+Le abitazioni non occupate sono abitazioni convenzionali che al censimento non risultano occupate come residenza abituale. Nel progetto vengono rapportate allo stock totale per ottenere la quota di abitazioni non occupate.
+
+Nel progetto:
+
+- `estat_dwellings_unoccupied_2021 / estat_dwellings_total_2021`
+- dataset Eurostat `cens_21dwop_r3`
+
+Limite: non tutte le abitazioni non occupate sono immediatamente disponibili per ridurre uno shortage. Possono includere seconde case, immobili in ristrutturazione, abitazioni in aree con bassa domanda, unita' non agibili o stock trattenuto fuori dal mercato.
+
+### Abitazioni per 1.000 abitanti
+
+L'indicatore rapporta lo stock di abitazioni convenzionali alla popolazione residente. Serve a normalizzare il numero di case rispetto alla dimensione demografica del paese.
+
+Nel progetto:
+
+- `estat_dwellings_total_2021 / estat_population_total_a`
+- dataset Eurostat `cens_21dwop_r3` e `demo_pjan`
+
+Limite: non dice se le abitazioni sono localizzate dove c'e' domanda, se sono accessibili economicamente o se sono effettivamente disponibili sul mercato.
+
+### Abitazioni per famiglia privata
+
+L'indicatore rapporta lo stock di abitazioni convenzionali al numero di famiglie private. E' un proxy semplice della relazione tra stock e nuclei familiari.
+
+Nel progetto:
+
+- `estat_dwellings_total_2021 / estat_private_households_total_a`
+- dataset Eurostat `cens_21dwop_r3` e `lfst_hhnhtych`
+
+Limite: una famiglia privata non coincide perfettamente con domanda abitativa effettiva. Convivenze forzate, famiglie che vorrebbero formarsi ma restano insieme, seconde case e stock non disponibile possono alterare la lettura.
 
 ## Tassi, mutui e credito
 

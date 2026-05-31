@@ -47,6 +47,44 @@ ITALIA_STOCK_ABITAZIONI = [
     "estat_dwellings_built_1961_1980_2021",
 ]
 
+ETA_STOCK_ABITAZIONI = [
+    ("estat_dwellings_built_before_1919_2021", "Prima del 1919"),
+    ("estat_dwellings_built_1919_1945_2021", "1919-1945"),
+    ("estat_dwellings_built_1946_1960_2021", "1946-1960"),
+    ("estat_dwellings_built_1961_1980_2021", "1961-1980"),
+    ("estat_dwellings_built_1981_2000_2021", "1981-2000"),
+    ("estat_dwellings_built_2001_2010_2021", "2001-2010"),
+    ("estat_dwellings_built_2011_2015_2021", "2011-2015"),
+    ("estat_dwellings_built_after_2016_2021", "2016 e dopo"),
+    ("estat_dwellings_built_unknown_2021", "Non indicato"),
+]
+
+INDICATORI_ETA_STOCK_ABITAZIONI = [
+    "estat_dwellings_built_before_1919_2021",
+    "estat_dwellings_built_1919_1945_2021",
+    "estat_dwellings_built_1946_1960_2021",
+    "estat_dwellings_built_1961_1980_2021",
+    "estat_dwellings_built_1981_2000_2021",
+    "estat_dwellings_built_2001_2010_2021",
+    "estat_dwellings_built_2011_2015_2021",
+    "estat_dwellings_built_after_2016_2021",
+    "estat_dwellings_built_unknown_2021",
+]
+
+
+INDICATORI_STOCK_PRE_1981 = [
+    "estat_dwellings_built_before_1919_2021",
+    "estat_dwellings_built_1919_1945_2021",
+    "estat_dwellings_built_1946_1960_2021",
+    "estat_dwellings_built_1961_1980_2021",
+]
+
+INDICATORI_STOCK_DAL_2001 = [
+    "estat_dwellings_built_2001_2010_2021",
+    "estat_dwellings_built_2011_2015_2021",
+    "estat_dwellings_built_after_2016_2021",
+]
+
 CODICI_AGGREGATI = {"EU27_2020", "EU", "EA20", "EA19"}
 
 
@@ -81,6 +119,17 @@ def formatta_asse_y(asse, percentuale=False):
     formatter.set_scientific(False)
     asse.yaxis.set_major_formatter(formatter)
     asse.ticklabel_format(axis="y", style="plain", useOffset=False)
+
+
+def formatta_asse_x(asse, percentuale=False):
+    if percentuale:
+        asse.xaxis.set_major_formatter(FuncFormatter(lambda valore, posizione: f"{valore:.0f}%"))
+        return
+
+    formatter = ScalarFormatter(useOffset=False)
+    formatter.set_scientific(False)
+    asse.xaxis.set_major_formatter(formatter)
+    asse.ticklabel_format(axis="x", style="plain", useOffset=False)
 
 
 def aggiungi_nota_min_max(asse, testo):
@@ -229,6 +278,7 @@ def grafico_stock_abitazioni_italia(frame, cartella_output="outputs/charts"):
     dati["ordine"] = dati["indicator_id"].map(ordine)
     dati = dati.sort_values("ordine")
     etichette = ["Prima del 1919", "1919-1945", "1946-1960", "1961-1980"]
+
     figura, asse = plt.subplots(figsize=(11, 6))
     asse.bar(etichette, dati["value"], color=COLORE_STOCK)
     asse.set_title("Italia - stock abitativo per periodo di costruzione, 2021", fontsize=14, fontweight="bold", loc="left")
@@ -240,6 +290,297 @@ def grafico_stock_abitazioni_italia(frame, cartella_output="outputs/charts"):
     percorso = cartella_fonte(cartella_output, "eurostat", "non_confrontabili") / "italia_stock_abitazioni_periodo_costruzione.png"
     salva_figura(figura, percorso)
     return percorso
+
+
+def grafico_stock_abitazioni_italia_completo(frame, cartella_output="outputs/charts"):
+    dati = frame.loc[(frame["country_code"] == "ITA") & (frame["indicator_id"].isin(INDICATORI_ETA_STOCK_ABITAZIONI))].copy()
+    dati = dati.loc[dati["value"] > 0].copy()
+    if dati.empty:
+        return None
+
+    ordine = {indicatore: posizione for posizione, indicatore in enumerate(INDICATORI_ETA_STOCK_ABITAZIONI)}
+    etichette = {indicatore: etichetta for indicatore, etichetta in ETA_STOCK_ABITAZIONI}
+    dati["ordine"] = dati["indicator_id"].map(ordine)
+    dati = dati.sort_values("ordine")
+    dati["value_mln"] = dati["value"] / 1_000_000
+    dati["etichetta"] = dati["indicator_id"].map(etichette)
+
+    figura, asse = plt.subplots(figsize=(11, 6))
+    asse.barh(dati["etichetta"], dati["value_mln"], color=COLORE_STOCK)
+    asse.invert_yaxis()
+    asse.set_title(
+        "Italia - stock abitativo per periodo di costruzione completo, 2021",
+        fontsize=14,
+        fontweight="bold",
+        loc="left",
+    )
+    asse.set_xlabel("milioni di abitazioni")
+    asse.grid(axis="x", alpha=0.22)
+    formatta_asse_x(asse)
+    aggiungi_footer(figura, dati)
+
+    percorso = (
+        cartella_fonte(cartella_output, "eurostat", "non_confrontabili")
+        / "italia_stock_abitazioni_periodo_costruzione_completo.png"
+    )
+    salva_figura(figura, percorso)
+    return percorso
+
+
+def valori_indicatore_per_paese(frame, indicatore, anno_preferito=None):
+    dati = frame.loc[frame["indicator_id"] == indicatore].copy()
+    if dati.empty:
+        return dati
+
+    righe = []
+    for paese, gruppo in dati.groupby("country_code"):
+        gruppo = gruppo.sort_values("time_period")
+        if anno_preferito is not None:
+            preferito = gruppo.loc[gruppo["time_period"].astype(str) == str(anno_preferito)]
+            if not preferito.empty:
+                righe.append(preferito.iloc[-1])
+                continue
+
+        righe.append(gruppo.iloc[-1])
+
+    return pd.DataFrame(righe).reset_index(drop=True)
+
+
+def grafico_barre_paesi(dati, titolo, asse_y, nome_file, cartella_output="outputs/charts", percentuale=False):
+    if dati.empty:
+        return None
+
+    dati = dati.loc[~dati["country_code"].isin(CODICI_AGGREGATI)].copy()
+    if dati.empty:
+        return None
+
+    dati = dati.sort_values("value", ascending=False)
+    figura, asse = plt.subplots(figsize=(12.5, 6))
+    colori = [COLORE_ITALIA if codice == "ITA" else COLORE_PRINCIPALE for codice in dati["country_code"]]
+    asse.bar(etichette_paesi_snapshot(dati), dati["value"], color=colori)
+    asse.set_title(titolo_snapshot(titolo, dati), fontsize=14, fontweight="bold", loc="left")
+    asse.set_ylabel(asse_y)
+    asse.grid(axis="y", alpha=0.22)
+    formatta_asse_y(asse, percentuale=percentuale)
+    aggiungi_footer(figura, dati)
+
+    percorso = cartella_fonte(cartella_output, "eurostat", "confronti") / nome_file
+    salva_figura(figura, percorso)
+    return percorso
+
+
+def grafico_stock_totale_paesi(frame, cartella_output="outputs/charts"):
+    dati = valori_indicatore_per_paese(frame, "estat_dwellings_total_2021", anno_preferito="2021")
+    if dati.empty:
+        return None
+
+    dati = dati.copy()
+    dati["value"] = dati["value"] / 1_000_000
+    dati["unit"] = "milioni di abitazioni"
+    return grafico_barre_paesi(
+        dati,
+        "Abitazioni convenzionali totali",
+        "milioni di abitazioni",
+        "eurostat_stock_abitazioni_totali_2021.png",
+        cartella_output,
+    )
+
+
+def prepara_rapporto_stock(frame, numeratore, denominatore, nome, unita, moltiplicatore=1, fattore_denominatore=1):
+    dati_numeratore = valori_indicatore_per_paese(frame, numeratore, anno_preferito="2021")
+    dati_denominatore = valori_indicatore_per_paese(frame, denominatore, anno_preferito="2021")
+    if dati_numeratore.empty or dati_denominatore.empty:
+        return pd.DataFrame()
+
+    sinistra = dati_numeratore[
+        ["country_code", "country_name", "time_period", "value", "source", "source_dataset"]
+    ].rename(
+        columns={
+            "time_period": "time_period_numeratore",
+            "value": "value_numeratore",
+            "source": "source_numeratore",
+            "source_dataset": "dataset_numeratore",
+        }
+    )
+    destra = dati_denominatore[["country_code", "time_period", "value", "source", "source_dataset"]].rename(
+        columns={
+            "time_period": "time_period_denominatore",
+            "value": "value_denominatore",
+            "source": "source_denominatore",
+            "source_dataset": "dataset_denominatore",
+        }
+    )
+    dati = sinistra.merge(destra, on="country_code", how="inner")
+    dati = dati.loc[(dati["value_denominatore"].notna()) & (dati["value_denominatore"] != 0)].copy()
+    if dati.empty:
+        return dati
+
+    denominatore_calcolo = dati["value_denominatore"] * fattore_denominatore
+    dati["value"] = dati["value_numeratore"] / denominatore_calcolo * moltiplicatore
+    dati["source"] = dati[["source_numeratore", "source_denominatore"]].agg(
+        lambda valori: ", ".join(sorted(set(valori.dropna()))),
+        axis=1,
+    )
+    dati["source_dataset"] = dati[["dataset_numeratore", "dataset_denominatore"]].agg(
+        lambda valori: ", ".join(sorted(set(valori.dropna()))),
+        axis=1,
+    )
+    dati["indicator_id"] = nome
+    dati["indicator_name"] = nome
+    dati["theme"] = "stock"
+    dati["unit"] = unita
+    dati["frequency"] = "A"
+    dati["time_period"] = dati.apply(periodo_rapporto_stock, axis=1)
+    colonne = [
+        "source",
+        "source_dataset",
+        "indicator_id",
+        "indicator_name",
+        "theme",
+        "country_code",
+        "country_name",
+        "time_period",
+        "value",
+        "unit",
+        "frequency",
+    ]
+    return dati[colonne]
+
+
+def periodo_rapporto_stock(riga):
+    numeratore = str(riga["time_period_numeratore"])
+    denominatore = str(riga["time_period_denominatore"])
+    if numeratore == denominatore:
+        return numeratore
+    return f"{numeratore}/{denominatore}"
+
+
+def grafico_stock_non_occupato_paesi(frame, cartella_output="outputs/charts"):
+    dati = prepara_rapporto_stock(
+        frame,
+        "estat_dwellings_unoccupied_2021",
+        "estat_dwellings_total_2021",
+        "Quota di abitazioni non occupate sullo stock",
+        "% dello stock abitativo",
+        moltiplicatore=100,
+    )
+    return grafico_barre_paesi(
+        dati,
+        "Abitazioni non occupate sullo stock",
+        "% dello stock abitativo",
+        "eurostat_abitazioni_non_occupate_stock_2021.png",
+        cartella_output,
+        percentuale=True,
+    )
+
+
+def grafico_abitazioni_per_1000_abitanti_paesi(frame, cartella_output="outputs/charts"):
+    dati = prepara_rapporto_stock(
+        frame,
+        "estat_dwellings_total_2021",
+        "estat_population_total_a",
+        "Abitazioni per 1.000 abitanti",
+        "abitazioni per 1.000 abitanti",
+        moltiplicatore=1000,
+    )
+    return grafico_barre_paesi(
+        dati,
+        "Abitazioni per 1.000 abitanti",
+        "abitazioni per 1.000 abitanti",
+        "eurostat_abitazioni_per_1000_abitanti_2021.png",
+        cartella_output,
+    )
+
+
+def grafico_abitazioni_per_famiglia_paesi(frame, cartella_output="outputs/charts"):
+    dati = prepara_rapporto_stock(
+        frame,
+        "estat_dwellings_total_2021",
+        "estat_private_households_total_a",
+        "Abitazioni per famiglia privata",
+        "abitazioni per famiglia privata",
+        fattore_denominatore=1000,
+    )
+    return grafico_barre_paesi(
+        dati,
+        "Abitazioni per famiglia privata",
+        "abitazioni per famiglia privata",
+        "eurostat_abitazioni_per_famiglia_2021.png",
+        cartella_output,
+    )
+
+
+def prepara_quota_periodi_stock(frame, indicatori, nome):
+    stock_totale = valori_indicatore_per_paese(frame, "estat_dwellings_total_2021", anno_preferito="2021")
+    stock_eta = frame.loc[frame["indicator_id"].isin(indicatori)].copy()
+    stock_eta = stock_eta.loc[stock_eta["time_period"].astype(str) == "2021"]
+    if stock_totale.empty or stock_eta.empty:
+        return pd.DataFrame()
+
+    somma_eta = (
+        stock_eta.groupby(["country_code", "country_name"], as_index=False)
+        .agg({"value": "sum", "source": "first", "source_dataset": "first"})
+        .rename(columns={"value": "value_eta"})
+    )
+    totale = stock_totale[["country_code", "time_period", "value"]].rename(columns={"value": "value_totale"})
+    dati = somma_eta.merge(totale, on="country_code", how="inner")
+    dati = dati.loc[(dati["value_totale"].notna()) & (dati["value_totale"] != 0)].copy()
+    if dati.empty:
+        return dati
+
+    dati["value"] = dati["value_eta"] / dati["value_totale"] * 100
+    dati["time_period"] = "2021"
+    dati["indicator_id"] = nome
+    dati["indicator_name"] = nome
+    dati["theme"] = "eta_stock"
+    dati["unit"] = "% dello stock abitativo"
+    dati["frequency"] = "A"
+    colonne = [
+        "source",
+        "source_dataset",
+        "indicator_id",
+        "indicator_name",
+        "theme",
+        "country_code",
+        "country_name",
+        "time_period",
+        "value",
+        "unit",
+        "frequency",
+    ]
+    return dati[colonne]
+
+
+def grafico_stock_pre_1981_paesi(frame, cartella_output="outputs/charts"):
+    dati = prepara_quota_periodi_stock(
+        frame,
+        INDICATORI_STOCK_PRE_1981,
+        "Quota di abitazioni costruite prima del 1981",
+    )
+    return grafico_barre_paesi(
+        dati,
+        "Abitazioni costruite prima del 1981",
+        "% dello stock abitativo",
+        "eurostat_abitazioni_costruite_prima_1981_2021.png",
+        cartella_output,
+        percentuale=True,
+    )
+
+
+def grafico_stock_dal_2001_paesi(frame, cartella_output="outputs/charts"):
+    dati = prepara_quota_periodi_stock(
+        frame,
+        INDICATORI_STOCK_DAL_2001,
+        "Quota di abitazioni costruite dal 2001",
+    )
+    return grafico_barre_paesi(
+        dati,
+        "Abitazioni costruite dal 2001",
+        "% dello stock abitativo",
+        "eurostat_abitazioni_costruite_dal_2001_2021.png",
+        cartella_output,
+        percentuale=True,
+    )
 
 
 def grafici_non_confrontabili(frame, cartella_output="outputs/charts", mostra_progresso=False):
@@ -259,6 +600,13 @@ def grafici_non_confrontabili(frame, cartella_output="outputs/charts", mostra_pr
     stock = grafico_stock_abitazioni_italia(frame, cartella_output)
     if stock:
         percorsi.append(stock)
+
+    if mostra_progresso:
+        print("[Non confrontabili] Creo italia_stock_abitazioni_periodo_costruzione_completo.png", flush=True)
+
+    stock_completo = grafico_stock_abitazioni_italia_completo(frame, cartella_output)
+    if stock_completo:
+        percorsi.append(stock_completo)
     return percorsi
 
 
@@ -388,6 +736,12 @@ def crea_grafici(frame, cartella_output="outputs/charts", mostra_progresso=False
     grafici_finali = [
         ("eurostat_housing_overburden_latest.png", grafico_ue_affordability),
         ("eurostat_giovani_con_genitori_latest.png", grafico_ue_shortage_proxy),
+        ("eurostat_stock_abitazioni_totali_2021.png", grafico_stock_totale_paesi),
+        ("eurostat_abitazioni_non_occupate_stock_2021.png", grafico_stock_non_occupato_paesi),
+        ("eurostat_abitazioni_per_1000_abitanti_2021.png", grafico_abitazioni_per_1000_abitanti_paesi),
+        ("eurostat_abitazioni_per_famiglia_2021.png", grafico_abitazioni_per_famiglia_paesi),
+        ("eurostat_abitazioni_costruite_prima_1981_2021.png", grafico_stock_pre_1981_paesi),
+        ("eurostat_abitazioni_costruite_dal_2001_2021.png", grafico_stock_dal_2001_paesi),
     ]
     for nome_file, funzione in grafici_finali:
         if mostra_progresso:
