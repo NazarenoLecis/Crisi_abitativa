@@ -37,6 +37,7 @@ Generare grafici:
 
 ```bash
 python3 -m scripts.run.genera_grafici
+python3 -m scripts.run.genera_grafici --includi-borsino
 ```
 
 Generare solo il focus locale sui capoluoghi italiani:
@@ -53,6 +54,14 @@ python3 -m scripts.run.focus_locale_italia --versione regioni
 python3 -m scripts.run.focus_locale_italia --versione province
 ```
 
+Generare il focus locale aggiuntivo con Borsino Immobiliare/BorsinoPro:
+
+```bash
+export BORSINO_API_KEY="..."
+python3 -m scripts.run.focus_borsino_italia
+python3 -m scripts.run.focus_borsino_italia --versione province
+```
+
 Consultare il glossario metodologico degli indicatori:
 
 ```text
@@ -66,6 +75,7 @@ I grafici vengono salvati in sottocartelle di `outputs/charts/`:
 - `outputs/charts/italia_locale/`
 - `outputs/charts/italia_locale/mappe_regioni/`
 - `outputs/charts/italia_locale/mappe_province/`
+- `outputs/charts/italia_locale/borsino/`
 - `outputs/charts/oecd/confronti/`
 
 I grafici con banda min-max salvano anche un CSV in `outputs/summary/` con paese minimo,
@@ -138,6 +148,28 @@ Output:
 - `outputs/charts/italia_locale/mappe_province/`
 - `outputs/summary/italia_locale/`
 
+### Sezione aggiuntiva Borsino
+
+Il focus Borsino e' opzionale e non sostituisce OMI. Usa l'API BorsinoPro/Borsino
+Immobiliare `getConsoData`, con autenticazione via `BORSINO_API_KEY`, per estrarre
+quotazioni comunali consolidate di vendita e affitto. Il default usa il tipo immobile
+Borsino `20`, cioe' abitazioni in stabili civili: in questo modo la sezione non mescola
+box auto, autorimesse, negozi o altre destinazioni non residenziali.
+
+Per limitare chiamate API non necessarie, il comando Borsino genera di default i soli
+capoluoghi di regione. Con `--versione province` scarica i capoluoghi di provincia,
+citta' metropolitane e liberi consorzi, salva il CSV e produce mappe regionali e
+provinciali per gli stessi indicatori locali: prezzi, canoni, anni di reddito per
+80 mq ed esempi di affitto per 40 e 60 mq.
+
+Output:
+
+- `outputs/charts/italia_locale/borsino/capoluoghi_regione/`
+- `outputs/charts/italia_locale/borsino/regioni/`
+- `outputs/charts/italia_locale/borsino/mappe_regioni/`
+- `outputs/charts/italia_locale/borsino/mappe_province/`
+- `outputs/summary/italia_locale/borsino/`
+
 ## File
 
 - `docs/definizioni.md`: glossario metodologico degli indicatori usati nel progetto.
@@ -147,6 +179,7 @@ Output:
 - `scripts/helpers/grafici.py`: funzioni di plotting Eurostat e grafici base.
 - `scripts/helpers/grafici_europei.py`: confronti Italia-UE sui principali indicatori abitativi.
 - `scripts/helpers/grafici_locali_italia.py`: focus locale sui capoluoghi italiani con ISTAT, OMI e redditi MEF.
+- `scripts/helpers/borsino.py`: focus locale aggiuntivo con API BorsinoPro/Borsino Immobiliare.
 - `scripts/helpers/grafici_oecd.py`: confronti OECD sui prezzi delle case.
 - `scripts/helpers/grafici_oecd_affordable.py`: grafici da OECD Affordable Housing Database.
 - `scripts/run/estrai_ocse.py`: panoramica OCSE.
@@ -154,6 +187,7 @@ Output:
 - `scripts/run/analisi_italia.py`: approfondimento Italia.
 - `scripts/run/genera_grafici.py`: produzione dei grafici.
 - `scripts/run/focus_locale_italia.py`: produzione del solo focus locale Italia.
+- `scripts/run/focus_borsino_italia.py`: produzione del focus locale aggiuntivo Borsino.
 
 ## Fonti
 
@@ -166,6 +200,7 @@ Output:
 - OECD Affordable Housing Database: https://www.oecd.org/content/oecd/en/data/datasets/oecd-affordable-housing-database.html
 - DG ECFIN AMECO database: https://economy-finance.ec.europa.eu/economic-research-and-databases/economic-databases/ameco-database_en
 - Agenzia Entrate, consultazione quotazioni OMI: https://www1.agenziaentrate.gov.it/servizi/geopoi_omi/
+- BorsinoPro/Borsino Immobiliare API quotazioni: https://api.borsinopro.it/api-quotazioni.html
 - MEF Dipartimento Finanze, open data dichiarazioni redditi comunali: https://www1.finanze.gov.it/finanze/analisi_stat/public/index.php?opendata=yes
 - openpolis GeoJSON confini regionali: https://github.com/openpolis/geojson-italy
 

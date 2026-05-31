@@ -930,6 +930,9 @@ def grafico_mappa_regionale_da_province(
     cartella_output,
     percentuale=False,
     decimali=0,
+    fonte="ISTAT, Agenzia Entrate - OMI, MEF Dipartimento Finanze, openpolis GeoJSON regioni",
+    nota="Colore regionale = mediana delle province disponibili nella regione.",
+    sezione="mappe_regioni",
 ):
     dati_regionali = aggrega_mappa_regionale_da_province(focus, colonna)
     if dati_regionali.empty:
@@ -964,16 +967,10 @@ def grafico_mappa_regionale_da_province(
     colorbar = figura.colorbar(mappabile, ax=asse, fraction=0.035, pad=0.02)
     colorbar.set_label(legenda, fontsize=9.2)
     formatta_colorbar_mappa(colorbar, percentuale=percentuale, decimali=decimali)
-    aggiungi_nota_locale(
-        asse,
-        "Colore regionale = mediana delle province disponibili nella regione.",
-    )
-    aggiungi_footer_locale(
-        figura,
-        "ISTAT, Agenzia Entrate - OMI, MEF Dipartimento Finanze, openpolis GeoJSON regioni",
-    )
+    aggiungi_nota_locale(asse, nota)
+    aggiungi_footer_locale(figura, fonte)
 
-    percorso = cartella_grafici_locali(cartella_output, "mappe_regioni") / nome_file
+    percorso = cartella_grafici_locali(cartella_output, sezione) / nome_file
     salva_grafico(figura, percorso)
     return percorso
 
@@ -987,6 +984,9 @@ def grafico_mappa_provinciale(
     cartella_output,
     percentuale=False,
     decimali=0,
+    fonte="ISTAT, Agenzia Entrate - OMI, MEF Dipartimento Finanze, openpolis GeoJSON province",
+    nota="Colore provinciale = valore del capoluogo/provincia disponibile. Sigle sarde storiche aggregate ai confini GeoJSON correnti.",
+    sezione="mappe_province",
 ):
     dati_provinciali = aggrega_mappa_provinciale(focus, colonna)
     if dati_provinciali.empty:
@@ -1021,16 +1021,10 @@ def grafico_mappa_provinciale(
     colorbar = figura.colorbar(mappabile, ax=asse, fraction=0.035, pad=0.02)
     colorbar.set_label(legenda, fontsize=9.2)
     formatta_colorbar_mappa(colorbar, percentuale=percentuale, decimali=decimali)
-    aggiungi_nota_locale(
-        asse,
-        "Colore provinciale = valore del capoluogo/provincia disponibile. Sigle sarde storiche aggregate ai confini GeoJSON correnti.",
-    )
-    aggiungi_footer_locale(
-        figura,
-        "ISTAT, Agenzia Entrate - OMI, MEF Dipartimento Finanze, openpolis GeoJSON province",
-    )
+    aggiungi_nota_locale(asse, nota)
+    aggiungi_footer_locale(figura, fonte)
 
-    percorso = cartella_grafici_locali(cartella_output, "mappe_province") / nome_file
+    percorso = cartella_grafici_locali(cartella_output, sezione) / nome_file
     salva_grafico(figura, percorso)
     return percorso
 

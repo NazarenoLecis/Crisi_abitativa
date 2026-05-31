@@ -303,6 +303,21 @@ Nel progetto:
 
 Limite: le quotazioni OMI sono intervalli territoriali, non prezzi effettivi di transazione o canoni contrattuali. La mediana usata nel progetto non e' pesata per numero di abitazioni, transazioni, superficie, popolazione o disponibilita' effettiva sul mercato.
 
+### Quotazioni Borsino Immobiliare/BorsinoPro
+
+Borsino Immobiliare/BorsinoPro mette a disposizione un'API di quotazioni immobiliari. Nel progetto viene usata come fonte aggiuntiva rispetto a OMI, non come sostituto, per confrontare i livelli locali ottenuti da una fonte privata con quelli dell'Osservatorio del Mercato Immobiliare.
+
+Nel progetto:
+
+- endpoint API `getConsoData`;
+- contratto `sale` per prezzi di vendita;
+- contratto `rent` per canoni di locazione;
+- tipo immobile default `20`, cioe' abitazioni in stabili civili;
+- valori minimi, mediani e massimi in euro/mq o euro/mq/mese;
+- stessi indicatori di affordability locale usati per OMI: prezzo di 80 mq in anni di reddito medio dichiarato ed esempi di affitto per 40, 50 e 60 mq.
+
+Limite: le quotazioni Borsino sono una fonte privata e richiedono autenticazione API. La metodologia esatta, la copertura territoriale e la composizione dei dati possono differire da OMI; per questo i grafici Borsino sono tenuti in una sezione separata e vanno letti come confronto informativo, non come serie ufficiale sostitutiva.
+
 ### Reddito medio dichiarato comunale MEF
 
 Il reddito medio dichiarato comunale viene calcolato dagli open data MEF/Dipartimento Finanze come rapporto tra reddito complessivo dichiarato e frequenza del reddito complessivo.
@@ -325,3 +340,4 @@ Limite: il reddito dichiarato e' riferito ai contribuenti, non ai nuclei familia
 - OECD, Housing prices indicator: https://www.oecd.org/en/data/indicators/housing-prices.html
 - OECD, Residential Property Price Indices FAQ: https://www.oecd.org/en/data/insights/data-explainers/2024/07/Residential-Property-Price-Indices-and-related-housing-indicators-Frequently-Asked-Questions.html
 - OECD, Average annual wages: https://www.oecd.org/en/data/indicators/average-annual-wages.html
+- BorsinoPro/Borsino Immobiliare API quotazioni: https://api.borsinopro.it/api-quotazioni.html
