@@ -65,6 +65,7 @@ I grafici vengono salvati in sottocartelle di `outputs/charts/`:
 - `outputs/charts/eurostat/italia/`
 - `outputs/charts/italia_locale/`
 - `outputs/charts/italia_locale/mappe_regioni/`
+- `outputs/charts/italia_locale/mappe_province/`
 - `outputs/charts/oecd/confronti/`
 
 I grafici con banda min-max salvano anche un CSV in `outputs/summary/` con paese minimo,
@@ -123,7 +124,8 @@ e provinciali sono aggregazioni dei capoluoghi di provincia scaricati da OMI, qu
 come proxy territoriali basate sui capoluoghi e non come quotazioni ufficiali aggregate da OMI.
 Il dettaglio provinciale viene salvato in CSV; per evitare grafici illeggibili con troppe barre,
 i PNG territoriali della versione provinciale sono mappe regionali calcolate come mediana delle
-province disponibili in ogni regione.
+province disponibili in ogni regione e mappe nazionali con confini provinciali per gli stessi
+indicatori.
 
 Tutti i comuni inclusi sono trattati allo stesso modo: non ci sono categorie o colori basati su
 ipotesi preliminari.
@@ -133,6 +135,7 @@ Output:
 - `outputs/charts/italia_locale/capoluoghi_regione/`
 - `outputs/charts/italia_locale/regioni/`
 - `outputs/charts/italia_locale/mappe_regioni/`
+- `outputs/charts/italia_locale/mappe_province/`
 - `outputs/summary/italia_locale/`
 
 ## File

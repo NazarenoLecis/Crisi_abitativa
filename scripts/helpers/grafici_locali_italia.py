@@ -25,6 +25,7 @@ MEF_REDDITI_COMUNI_URL = (
     "v_4_0_0/contenuti/Redditi_e_principali_variabili_IRPEF_su_base_comunale_CSV_2024.zip"
 )
 REGIONI_GEOJSON_URL = "https://raw.githubusercontent.com/openpolis/geojson-italy/master/geojson/limits_IT_regions.geojson"
+PROVINCE_GEOJSON_URL = "https://raw.githubusercontent.com/openpolis/geojson-italy/master/geojson/limits_IT_provinces.geojson"
 
 CAPOLUOGHI_REGIONE = {
     "Ancona",
@@ -61,6 +62,12 @@ VERSIONI_FOCUS_LOCALE = {
 }
 
 ESEMPI_METRATURE_AFFITTO = [40, 50, 60]
+SIGLE_PROVINCE_STORICHE = {
+    "CI": "SU",
+    "OG": "NU",
+    "OT": "SS",
+    "VS": "SU",
+}
 
 MAPPE_REGIONALI_DA_PROVINCE = [
     (
@@ -76,14 +83,6 @@ MAPPE_REGIONALI_DA_PROVINCE = [
         "Canoni di locazione OMI: sintesi regionale delle province",
         "euro/mq/mese",
         "mappa_regioni_da_province_canoni_locazione_omi.png",
-        False,
-        1,
-    ),
-    (
-        "anni_reddito_per_80mq",
-        "Prezzo di 80 mq in anni di reddito medio dichiarato: sintesi regionale delle province",
-        "anni di reddito",
-        "mappa_regioni_da_province_anni_reddito_per_80mq.png",
         False,
         1,
     ),
@@ -116,6 +115,65 @@ MAPPE_REGIONALI_DA_PROVINCE = [
         "Affitto stimato per 60 mq sul reddito medio dichiarato: sintesi regionale delle province",
         "% del reddito",
         "mappa_regioni_da_province_affitto_60mq_reddito.png",
+        True,
+        0,
+    ),
+]
+
+MAPPE_PROVINCIALI = [
+    (
+        "prezzo_mq_mediano",
+        "Prezzi di vendita OMI: province",
+        "euro/mq",
+        "mappa_province_prezzi_vendita_omi.png",
+        False,
+        0,
+    ),
+    (
+        "affitto_mq_mese_mediano",
+        "Canoni di locazione OMI: province",
+        "euro/mq/mese",
+        "mappa_province_canoni_locazione_omi.png",
+        False,
+        1,
+    ),
+    (
+        "anni_reddito_per_80mq",
+        "Prezzo di 80 mq in anni di reddito medio dichiarato: province",
+        "anni di reddito",
+        "mappa_province_anni_reddito_per_80mq.png",
+        False,
+        1,
+    ),
+    (
+        "affitto_40mq_mese",
+        "Canone mensile stimato per 40 mq: province",
+        "euro al mese",
+        "mappa_province_affitto_40mq_mese.png",
+        False,
+        0,
+    ),
+    (
+        "affitto_40mq_su_reddito_pct",
+        "Affitto stimato per 40 mq sul reddito medio dichiarato: province",
+        "% del reddito",
+        "mappa_province_affitto_40mq_reddito.png",
+        True,
+        0,
+    ),
+    (
+        "affitto_60mq_mese",
+        "Canone mensile stimato per 60 mq: province",
+        "euro al mese",
+        "mappa_province_affitto_60mq_mese.png",
+        False,
+        0,
+    ),
+    (
+        "affitto_60mq_su_reddito_pct",
+        "Affitto stimato per 60 mq sul reddito medio dichiarato: province",
+        "% del reddito",
+        "mappa_province_affitto_60mq_reddito.png",
         True,
         0,
     ),
@@ -543,10 +601,19 @@ def cartella_grafici_locali(cartella_output, sezione=None):
 def rimuovi_grafici_province(cartella_output):
     cartella = Path(cartella_output) / "italia_locale" / "province"
     if not cartella.exists():
+        cartella_mappe = Path(cartella_output) / "italia_locale" / "mappe_regioni"
+        mappa_superata = cartella_mappe / "mappa_regioni_da_province_anni_reddito_per_80mq.png"
+        if mappa_superata.exists():
+            mappa_superata.unlink()
         return
 
     for percorso in cartella.glob("*.png"):
         percorso.unlink()
+
+    cartella_mappe = Path(cartella_output) / "italia_locale" / "mappe_regioni"
+    mappa_superata = cartella_mappe / "mappa_regioni_da_province_anni_reddito_per_80mq.png"
+    if mappa_superata.exists():
+        mappa_superata.unlink()
 
 
 def aggiungi_footer_locale(figura, fonte):
@@ -650,6 +717,30 @@ def sigle_territorio(gruppo):
     return ", ".join(sigle)
 
 
+def sigla_da_etichetta(etichetta):
+    testo = normalizza_spazi(etichetta)
+    trovato = re.search(r"\(([A-Z]{2})\)$", testo)
+    if trovato:
+        return trovato.group(1)
+
+    return ""
+
+
+def completa_provincia_da_etichetta(focus):
+    if "provincia" not in focus.columns or "etichetta" not in focus.columns:
+        return focus
+
+    risultato = focus.copy()
+    provincia_testo = risultato["provincia"].map(normalizza_spazi)
+    province_mancanti = provincia_testo == ""
+    if province_mancanti.any():
+        risultato.loc[province_mancanti, "provincia"] = risultato.loc[province_mancanti, "etichetta"].map(
+            sigla_da_etichetta
+        )
+
+    return risultato
+
+
 def aggrega_focus_locale(focus, livello):
     if livello == "regioni":
         colonne_gruppo = ["regione"]
@@ -733,6 +824,12 @@ def scarica_geojson_regioni():
     return risposta.json()
 
 
+def scarica_geojson_province():
+    risposta = requests.get(PROVINCE_GEOJSON_URL, timeout=120, headers={"User-Agent": "crisi-abitativa/0.1"})
+    risposta.raise_for_status()
+    return risposta.json()
+
+
 def poligoni_feature_regionale(feature):
     geometria = feature.get("geometry", {})
     tipo = geometria.get("type")
@@ -786,6 +883,38 @@ def aggrega_mappa_regionale_da_province(focus, colonna):
         .agg(
             valore=(colonna, "median"),
             province=("etichetta", "count"),
+        )
+        .sort_values("valore", ascending=False)
+    )
+    return aggregato
+
+
+def sigla_provincia_per_mappa(valore):
+    if pd.isna(valore):
+        return ""
+
+    sigla = normalizza_spazi(valore).upper()
+    if sigla in SIGLE_PROVINCE_STORICHE:
+        return SIGLE_PROVINCE_STORICHE[sigla]
+
+    return sigla
+
+
+def aggrega_mappa_provinciale(focus, colonna):
+    dati = completa_provincia_da_etichetta(focus).dropna(subset=[colonna]).copy()
+    if dati.empty:
+        return pd.DataFrame()
+
+    dati["sigla_mappa"] = dati["provincia"].map(sigla_provincia_per_mappa)
+    dati = dati.loc[dati["sigla_mappa"] != ""].copy()
+    if dati.empty:
+        return pd.DataFrame()
+
+    aggregato = (
+        dati.groupby("sigla_mappa", as_index=False)
+        .agg(
+            valore=(colonna, "median"),
+            territori=("etichetta", "count"),
         )
         .sort_values("valore", ascending=False)
     )
@@ -849,6 +978,63 @@ def grafico_mappa_regionale_da_province(
     return percorso
 
 
+def grafico_mappa_provinciale(
+    focus,
+    colonna,
+    titolo,
+    legenda,
+    nome_file,
+    cartella_output,
+    percentuale=False,
+    decimali=0,
+):
+    dati_provinciali = aggrega_mappa_provinciale(focus, colonna)
+    if dati_provinciali.empty:
+        return None
+
+    geojson = scarica_geojson_province()
+    features = geojson["features"]
+    valori = dati_provinciali.set_index("sigla_mappa")["valore"].to_dict()
+    minimo = float(dati_provinciali["valore"].min())
+    massimo = float(dati_provinciali["valore"].max())
+    if minimo == massimo:
+        minimo -= 1
+        massimo += 1
+
+    normalizzazione = Normalize(vmin=minimo, vmax=massimo)
+    scala_colori = plt.get_cmap("YlOrRd")
+    figura, asse = plt.subplots(figsize=(8.2, 9.2))
+    for feature in features:
+        sigla = feature["properties"]["prov_acr"]
+        valore = valori.get(sigla)
+        colore = scala_colori(normalizzazione(valore)) if valore is not None else "#E6E6E6"
+        disegna_regione(asse, feature, colore)
+
+    longitudine_min, longitudine_max, latitudine_min, latitudine_max = limiti_geojson_regioni(features)
+    asse.set_xlim(longitudine_min - 0.7, longitudine_max + 0.7)
+    asse.set_ylim(latitudine_min - 0.6, latitudine_max + 0.6)
+    asse.set_aspect("equal")
+    asse.axis("off")
+    asse.set_title(titolo_su_piu_righe(titolo, larghezza=58), fontsize=14, fontweight="bold", loc="left", pad=12)
+    mappabile = ScalarMappable(norm=normalizzazione, cmap=scala_colori)
+    mappabile.set_array([])
+    colorbar = figura.colorbar(mappabile, ax=asse, fraction=0.035, pad=0.02)
+    colorbar.set_label(legenda, fontsize=9.2)
+    formatta_colorbar_mappa(colorbar, percentuale=percentuale, decimali=decimali)
+    aggiungi_nota_locale(
+        asse,
+        "Colore provinciale = valore del capoluogo/provincia disponibile. Sigle sarde storiche aggregate ai confini GeoJSON correnti.",
+    )
+    aggiungi_footer_locale(
+        figura,
+        "ISTAT, Agenzia Entrate - OMI, MEF Dipartimento Finanze, openpolis GeoJSON province",
+    )
+
+    percorso = cartella_grafici_locali(cartella_output, "mappe_province") / nome_file
+    salva_grafico(figura, percorso)
+    return percorso
+
+
 def crea_mappe_regionali_da_province(focus, cartella_output, mostra_progresso=False):
     percorsi = []
     for colonna, titolo, legenda, nome_file, percentuale, decimali in MAPPE_REGIONALI_DA_PROVINCE:
@@ -856,6 +1042,28 @@ def crea_mappe_regionali_da_province(focus, cartella_output, mostra_progresso=Fa
             print(f"[Focus locale Italia - province] Creo mappa regionale {nome_file}", flush=True)
 
         percorso = grafico_mappa_regionale_da_province(
+            focus,
+            colonna,
+            titolo,
+            legenda,
+            nome_file,
+            cartella_output,
+            percentuale=percentuale,
+            decimali=decimali,
+        )
+        if percorso:
+            percorsi.append(percorso)
+
+    return percorsi
+
+
+def crea_mappe_provinciali(focus, cartella_output, mostra_progresso=False):
+    percorsi = []
+    for colonna, titolo, legenda, nome_file, percentuale, decimali in MAPPE_PROVINCIALI:
+        if mostra_progresso:
+            print(f"[Focus locale Italia - province] Creo mappa provinciale {nome_file}", flush=True)
+
+        percorso = grafico_mappa_provinciale(
             focus,
             colonna,
             titolo,
@@ -956,14 +1164,16 @@ def versioni_da_generare(versione):
 def salva_summary_locale(focus, cartella_output, versione):
     cartella = cartella_summary(cartella_output, "italia_locale")
     percorso = cartella / f"focus_locale_{sezione_versione(versione)}_omi_mef.csv"
-    focus.sort_values("anni_reddito_per_80mq", ascending=False).to_csv(percorso, index=False)
+    focus_pulito = completa_provincia_da_etichetta(focus)
+    focus_pulito.sort_values("anni_reddito_per_80mq", ascending=False).to_csv(percorso, index=False)
     return percorso
 
 
 def salva_summary_base_locale(focus, cartella_output):
     cartella = cartella_summary(cartella_output, "italia_locale")
     percorso = cartella / "focus_locale_base_capoluoghi_provincia_omi_mef.csv"
-    focus.sort_values("anni_reddito_per_80mq", ascending=False).to_csv(percorso, index=False)
+    focus_pulito = completa_provincia_da_etichetta(focus)
+    focus_pulito.sort_values("anni_reddito_per_80mq", ascending=False).to_csv(percorso, index=False)
     return percorso
 
 
@@ -979,11 +1189,23 @@ def crea_grafici_versione_locale(focus, versione, cartella_output, mostra_progre
         if mostra_progresso:
             print(
                 "[Focus locale Italia - province] Dettaglio provinciale salvato in CSV; "
-                "per i PNG creo mappe regionali basate sui valori provinciali.",
+                "per i PNG creo mappe regionali e provinciali basate sui valori provinciali.",
                 flush=True,
             )
 
-        return crea_mappe_regionali_da_province(focus, cartella_output, mostra_progresso=mostra_progresso)
+        percorsi_mappe = crea_mappe_regionali_da_province(
+            focus,
+            cartella_output,
+            mostra_progresso=mostra_progresso,
+        )
+        percorsi_mappe.extend(
+            crea_mappe_provinciali(
+                focus,
+                cartella_output,
+                mostra_progresso=mostra_progresso,
+            )
+        )
+        return percorsi_mappe
 
     sezione = sezione_versione(versione)
     semestre = formatta_semestre(focus["semestre_omi"].iloc[0])
