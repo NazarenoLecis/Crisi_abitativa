@@ -7,7 +7,8 @@ from scripts.helpers.utils import OECD_BASE_URL, WATERMARK, scarica_testo
 
 
 PAESI_DEFAULT = ["ITA", "FRA", "DEU", "ESP", "NLD", "PRT", "GRC", "USA", "GBR"]
-ANNO_BASE_INDICI = "2019"
+ANNO_BASE_INDICI = "2000"
+INIZIO_SERIE_OECD = "2000"
 
 MISURE_PREZZI_CASE = [
     ("RHP", "Prezzi reali delle case", "oecd_prezzi_reali_case.png"),
@@ -23,7 +24,7 @@ def cartella_oecd(cartella_output):
     return output
 
 
-def scarica_prezzi_case_oecd(paesi=None, misure=None, inizio="2000", fine="2024"):
+def scarica_prezzi_case_oecd(paesi=None, misure=None, inizio=INIZIO_SERIE_OECD, fine="2024"):
     lista_paesi = paesi or PAESI_DEFAULT
     lista_misure = misure or [misura for misura, titolo, nome_file in MISURE_PREZZI_CASE]
     chiave = f"{'+'.join(lista_paesi)}.A.{'+'.join(lista_misure)}.?"
@@ -56,20 +57,50 @@ def scarica_prezzi_case_oecd(paesi=None, misure=None, inizio="2000", fine="2024"
     return dati.dropna(subset=["value", "data_plot"]).sort_values(["measure_code", "country_code", "data_plot"])
 
 
+def anno_base_oecd(gruppo, anno_base=ANNO_BASE_INDICI):
+    ordinato = gruppo.sort_values("data_plot").copy()
+    base_preferita = ordinato.loc[ordinato["time_period"].astype(str) == str(anno_base)]
+    if not base_preferita.empty:
+        return base_preferita.iloc[0]
+
+    return ordinato.iloc[0]
+
+
 def ribasa_indici_oecd(dati, anno_base=ANNO_BASE_INDICI):
     serie_ribasate = []
     for valori_gruppo, gruppo in dati.groupby(["country_code", "measure_code"], dropna=False):
-        base = gruppo.loc[gruppo["time_period"].astype(str) == str(anno_base), "value"]
-        if base.empty or base.iloc[0] == 0:
+        base = anno_base_oecd(gruppo, anno_base=anno_base)
+        if pd.isna(base["value"]) or base["value"] == 0:
             continue
 
         ordinato = gruppo.sort_values("data_plot").copy()
-        ordinato["value"] = ordinato["value"] / base.iloc[0] * 100
+        ordinato["anno_base"] = str(base["time_period"])
+        ordinato["value"] = ordinato["value"] / base["value"] * 100
         serie_ribasate.append(ordinato)
 
     if not serie_ribasate:
         return pd.DataFrame(columns=dati.columns)
     return pd.concat(serie_ribasate, ignore_index=True)
+
+
+def etichetta_base_oecd(serie, anno_base=ANNO_BASE_INDICI):
+    basi = sorted({str(valore) for valore in serie["anno_base"].dropna()})
+    if len(basi) == 1:
+        return f"{basi[0]}=100"
+
+    basi_numeriche = pd.to_numeric(pd.Series(basi), errors="coerce").dropna()
+    if not basi_numeriche.empty and basi_numeriche.min() < int(anno_base):
+        return "primo anno disponibile=100"
+
+    return f"{anno_base}=100 o primo anno disponibile"
+
+
+def nota_base_oecd(serie, anno_base=ANNO_BASE_INDICI):
+    basi = sorted({str(valore) for valore in serie["anno_base"].dropna()})
+    if len(basi) <= 1:
+        return ""
+
+    return f"Base: {anno_base} quando disponibile; altrimenti primo anno disponibile nella serie."
 
 
 def grafico_linee_oecd(dati, misura, titolo, nome_file, cartella_output, anno_base=ANNO_BASE_INDICI):
@@ -85,11 +116,25 @@ def grafico_linee_oecd(dati, misura, titolo, nome_file, cartella_output, anno_ba
         alpha = 1 if paese == "ITA" else 0.72
         asse.plot(gruppo["data_plot"], gruppo["value"], label=paese, color=colore, linewidth=larghezza, alpha=alpha)
 
-    asse.set_title(f"{titolo} ({anno_base}=100)", fontsize=14, fontweight="bold", loc="left")
-    asse.set_ylabel(f"indice {anno_base}=100")
+    etichetta_base = etichetta_base_oecd(serie, anno_base=anno_base)
+    asse.set_title(f"{titolo} ({etichetta_base})", fontsize=14, fontweight="bold", loc="left")
+    asse.set_ylabel("indice, base=100")
     asse.grid(alpha=0.22)
     formatta_asse_y(asse)
     asse.legend(loc="best", frameon=False, ncol=2)
+    nota_base = nota_base_oecd(serie, anno_base=anno_base)
+    if nota_base:
+        asse.text(
+            0.01,
+            0.98,
+            nota_base,
+            transform=asse.transAxes,
+            ha="left",
+            va="top",
+            fontsize=8.5,
+            color="#333333",
+            bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.76, "boxstyle": "round,pad=0.25"},
+        )
     figura.text(
         0.01,
         0.01,

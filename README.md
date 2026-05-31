@@ -80,7 +80,7 @@ Fonte: ... | Elaborazione di Nazareno Lecis
 ## Indicatori OCSE
 
 - salario medio annuo;
-- indici nominali e reali dei prezzi delle case, ribasati a 2019=100 nei grafici;
+- indici nominali e reali dei prezzi delle case, dal 2000 in poi e ribasati a 2000=100;
 - rapporto prezzi case / reddito;
 - rapporto prezzi case / affitti;
 - investimenti in abitazioni, dove disponibili.
