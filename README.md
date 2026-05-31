@@ -158,9 +158,6 @@ Output:
 - OECD housing prices: https://www.oecd.org/en/data/indicators/housing-prices.html
 - OECD Affordable Housing Database: https://www.oecd.org/content/oecd/en/data/datasets/oecd-affordable-housing-database.html
 - DG ECFIN AMECO database: https://economy-finance.ec.europa.eu/economic-research-and-databases/economic-databases/ameco-database_en
-- Banca d'Italia, mercato finanziario e BDS tavola BMK0100: https://www.bancaditalia.it/statistiche/tematiche/moneta-intermediari-finanza/mercati/index.html
-- Banca d'Italia, Tassi Effettivi Globali Medi (TEGM): https://www.bancaditalia.it/compiti/vigilanza/compiti-vigilanza/tegm/
-- Banca d'Italia, QEF 17, Prices of residential property in Italy: Constructing a new indicator: https://www.bancaditalia.it/pubblicazioni/qef/2008-0017/QEF_17.pdf
 - Agenzia Entrate, consultazione quotazioni OMI: https://www1.agenziaentrate.gov.it/servizi/geopoi_omi/
 - MEF Dipartimento Finanze, open data dichiarazioni redditi comunali: https://www1.finanze.gov.it/finanze/analisi_stat/public/index.php?opendata=yes
 
@@ -179,20 +176,6 @@ prezzi casa EU27 da Eurostat `prc_hpi_a`, prezzi casa Italia estesi da OECD
 ## Nota metodologica
 
 I tempi medi di rilascio permessi e di costruzione non risultano disponibili come serie armonizzata unica nei dataset Eurostat/OECD usati qui. Per ora vengono usati proxy osservabili: permessi edilizi, produzione nelle costruzioni, investimenti e stock abitativo per periodo di costruzione. Se troviamo una fonte amministrativa comparabile sui tempi effettivi, si puo' aggiungere in `scripts/helpers/config.py`.
-
-Per il tasso a 30 anni non esiste una serie pubblica omogenea di EurIRS dal 1970. Una fonte coerente
-con la scadenza richiesta e' Banca d'Italia BDS, tavola `BMK0100`, BTP guida 30 anni, rendimento
-lordo a scadenza. Il QEF 17 della Banca d'Italia aiuta a interpretare il proxy: il paper collega il
-ciclo dei prezzi delle abitazioni al costo del denaro, alla diffusione dei mutui e al ruolo
-dell'abitazione nella ricchezza delle famiglie. Il BTP 30 anni e' quindi utile per il contesto
-macro-finanziario della pressione dei tassi lunghi, ma non misura direttamente il tasso IRS/EurIRS
-contrattuale applicato ai mutui.
-
-La serie storica TEGM della Banca d'Italia permette di osservare direttamente il tasso effettivo
-globale medio sui mutui ipotecari. La classificazione e' unica fino al secondo trimestre 2004, poi
-distingue mutui a tasso fisso e mutui a tasso variabile. Il TEGM e' utile come misura diretta del
-costo effettivo medio rilevato per la normativa antiusura, ma non coincide con il TAN o con l'EurIRS
-usato nel pricing del singolo contratto.
 
 Il focus locale Italia usa le quotazioni OMI come misura del livello territoriale dei prezzi e dei
 canoni. Gli indicatori di affordability locale sono proxy: il prezzo di 80 mq e gli esempi di

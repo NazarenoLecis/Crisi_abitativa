@@ -274,30 +274,6 @@ Nel progetto:
 
 Limite: una famiglia privata non coincide perfettamente con domanda abitativa effettiva. Convivenze forzate, famiglie che vorrebbero formarsi ma restano insieme, seconde case e stock non disponibile possono alterare la lettura.
 
-## Tassi, mutui e credito
-
-### BTP guida a 30 anni
-
-Il rendimento lordo del BTP guida a 30 anni e' un indicatore di mercato dei tassi lunghi sui titoli di Stato italiani. Nel progetto e' usato come contesto macro-finanziario dei tassi lunghi.
-
-Nel progetto:
-
-- Banca d'Italia BDS `BMK0100`
-
-Limite: non e' un tasso mutuo e non e' un IRS/EurIRS. Misura il rendimento di un titolo pubblico, quindi incorpora rischio sovrano e condizioni del mercato dei BTP.
-
-### TEGM sui mutui ipotecari
-
-Il TEGM e' il tasso effettivo globale medio rilevato per categoria di finanziamento e classe d'importo ai fini della normativa antiusura. La serie storica Banca d'Italia riporta i tassi pubblicati trimestralmente dal MEF e i relativi tassi soglia.
-
-Nel progetto:
-
-- fonte Banca d'Italia TEGM
-
-Nota metodologica: per i mutui ipotecari la classificazione e' unica fino al 2004-Q2; dal 2004-Q3 distingue tasso fisso e tasso variabile. Per questo il grafico principale parte dal 2004-Q3 e il periodo precedente e' mostrato solo come contesto storico separato.
-
-Limite: il TEGM non coincide con TAN, TAEG del singolo mutuo o EurIRS. E' una media regolatoria rilevata per categorie omogenee.
-
 ## Focus locale Italia
 
 ### Selezione dei comuni
@@ -314,7 +290,9 @@ Nel progetto tutti i comuni selezionati sono trattati allo stesso modo: non veng
 
 ### Quotazioni OMI
 
-Le quotazioni OMI dell'Agenzia Entrate riportano intervalli di valori per zona OMI, tipologia immobiliare e stato conservativo. Per il focus locale vengono usate le destinazioni residenziali e, quando disponibile, lo stato conservativo normale.
+OMI significa Osservatorio del Mercato Immobiliare. E' una banca dati dell'Agenzia delle Entrate che pubblica quotazioni immobiliari per zone territoriali omogenee, dette zone OMI. Per ciascuna zona riporta intervalli di valori, non prezzi puntuali, distinti per destinazione d'uso, tipologia immobiliare e stato conservativo.
+
+Le quotazioni OMI dell'Agenzia Entrate riportano quindi valori indicativi territoriali. Per il focus locale vengono usate le destinazioni residenziali e, quando disponibile, lo stato conservativo normale.
 
 Nel progetto:
 
@@ -347,5 +325,3 @@ Limite: il reddito dichiarato e' riferito ai contribuenti, non ai nuclei familia
 - OECD, Housing prices indicator: https://www.oecd.org/en/data/indicators/housing-prices.html
 - OECD, Residential Property Price Indices FAQ: https://www.oecd.org/en/data/insights/data-explainers/2024/07/Residential-Property-Price-Indices-and-related-housing-indicators-Frequently-Asked-Questions.html
 - OECD, Average annual wages: https://www.oecd.org/en/data/indicators/average-annual-wages.html
-- Banca d'Italia, TEGM: https://www.bancaditalia.it/compiti/vigilanza/compiti-vigilanza/tegm/
-- Banca d'Italia, BDS mercato finanziario: https://www.bancaditalia.it/statistiche/tematiche/moneta-intermediari-finanza/mercati/index.html
