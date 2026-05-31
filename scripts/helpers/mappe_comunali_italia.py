@@ -247,6 +247,40 @@ def salva_mappa_comunale(figura, percorso):
     plt.close(figura)
 
 
+def layout_mappa_comunale(longitudine_min, longitudine_max, latitudine_min, latitudine_max):
+    larghezza_geo = max(longitudine_max - longitudine_min, 0.1)
+    altezza_geo = max(latitudine_max - latitudine_min, 0.1)
+    rapporto_geo = larghezza_geo / altezza_geo
+
+    if rapporto_geo > 1.35:
+        figura_larghezza, figura_altezza = 10.8, 6.8
+        area_x, area_y, area_larghezza, area_altezza = 0.04, 0.13, 0.76, 0.55
+        colorbar = [0.84, 0.19, 0.026, 0.50]
+        titolo_y, nota_y = 0.93, 0.80
+    elif rapporto_geo < 0.75:
+        figura_larghezza, figura_altezza = 8.6, 9.2
+        area_x, area_y, area_larghezza, area_altezza = 0.03, 0.10, 0.74, 0.72
+        colorbar = [0.82, 0.22, 0.03, 0.54]
+        titolo_y, nota_y = 0.94, 0.84
+    else:
+        figura_larghezza, figura_altezza = 8.9, 8.2
+        area_x, area_y, area_larghezza, area_altezza = 0.04, 0.11, 0.74, 0.66
+        colorbar = [0.82, 0.21, 0.03, 0.54]
+        titolo_y, nota_y = 0.94, 0.83
+
+    area_rapporto = (figura_larghezza * area_larghezza) / (figura_altezza * area_altezza)
+    if area_rapporto > rapporto_geo:
+        asse_altezza = area_altezza
+        asse_larghezza = (figura_altezza * asse_altezza * rapporto_geo) / figura_larghezza
+    else:
+        asse_larghezza = area_larghezza
+        asse_altezza = (figura_larghezza * asse_larghezza) / (figura_altezza * rapporto_geo)
+
+    asse_x = area_x + (area_larghezza - asse_larghezza) / 2
+    asse_y = area_y + (area_altezza - asse_altezza) / 2
+    return (figura_larghezza, figura_altezza), [asse_x, asse_y, asse_larghezza, asse_altezza], colorbar, titolo_y, nota_y
+
+
 def codice_catastale_feature(feature):
     proprieta = feature.get("properties", {})
     codice = proprieta.get("com_catasto_code", "")
@@ -324,23 +358,29 @@ def grafico_mappa_comunale_regione(
         minimo -= 1
         massimo += 1
 
+    longitudine_min, longitudine_max, latitudine_min, latitudine_max = limiti_geojson_regioni(features)
+    dimensione_figura, posizione_asse, posizione_colorbar, titolo_y, nota_y = layout_mappa_comunale(
+        longitudine_min,
+        longitudine_max,
+        latitudine_min,
+        latitudine_max,
+    )
     normalizzazione = Normalize(vmin=minimo, vmax=massimo)
     scala_colori = plt.get_cmap("YlOrRd")
-    figura = plt.figure(figsize=(8.6, 9.2))
-    asse = figura.add_axes([0.03, 0.11, 0.74, 0.72])
+    figura = plt.figure(figsize=dimensione_figura)
+    asse = figura.add_axes(posizione_asse)
     for feature in features:
         valore = valore_feature_comunale(feature, valori_catastali, valori_istat, valori_nome)
         colore = scala_colori(normalizzazione(valore)) if valore is not None else "#E6E6E6"
         disegna_comune(asse, feature, colore)
 
-    longitudine_min, longitudine_max, latitudine_min, latitudine_max = limiti_geojson_regioni(features)
     asse.set_xlim(longitudine_min - 0.25, longitudine_max + 0.25)
     asse.set_ylim(latitudine_min - 0.25, latitudine_max + 0.25)
     asse.set_aspect("equal")
     asse.axis("off")
     figura.text(
         0.03,
-        0.94,
+        titolo_y,
         titolo_su_piu_righe(titolo, larghezza=58),
         ha="left",
         va="top",
@@ -349,7 +389,7 @@ def grafico_mappa_comunale_regione(
     )
     figura.text(
         0.03,
-        0.86,
+        nota_y,
         "Colore comunale = valore OMI del comune. Comuni grigi = nessun dato residenziale OMI utilizzabile.",
         ha="left",
         va="top",
@@ -358,7 +398,7 @@ def grafico_mappa_comunale_regione(
     )
     mappabile = ScalarMappable(norm=normalizzazione, cmap=scala_colori)
     mappabile.set_array([])
-    asse_colorbar = figura.add_axes([0.81, 0.22, 0.028, 0.55])
+    asse_colorbar = figura.add_axes(posizione_colorbar)
     colorbar = figura.colorbar(mappabile, cax=asse_colorbar)
     colorbar.set_label(legenda, fontsize=9.2)
     formatta_colorbar_mappa(colorbar, percentuale=percentuale, decimali=decimali)
