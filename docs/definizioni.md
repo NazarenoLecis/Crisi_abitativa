@@ -282,7 +282,6 @@ Il rendimento lordo del BTP guida a 30 anni e' un indicatore di mercato dei tass
 
 Nel progetto:
 
-- script `scripts/verifica_btp_30_anni.py`
 - Banca d'Italia BDS `BMK0100`
 
 Limite: non e' un tasso mutuo e non e' un IRS/EurIRS. Misura il rendimento di un titolo pubblico, quindi incorpora rischio sovrano e condizioni del mercato dei BTP.
@@ -293,12 +292,50 @@ Il TEGM e' il tasso effettivo globale medio rilevato per categoria di finanziame
 
 Nel progetto:
 
-- script `scripts/verifica_tassi_mutui_tegm.py`
 - fonte Banca d'Italia TEGM
 
 Nota metodologica: per i mutui ipotecari la classificazione e' unica fino al 2004-Q2; dal 2004-Q3 distingue tasso fisso e tasso variabile. Per questo il grafico principale parte dal 2004-Q3 e il periodo precedente e' mostrato solo come contesto storico separato.
 
 Limite: il TEGM non coincide con TAN, TAEG del singolo mutuo o EurIRS. E' una media regolatoria rilevata per categorie omogenee.
+
+## Focus locale Italia
+
+### Selezione dei comuni
+
+Il focus locale usa il file ISTAT dei comuni italiani per selezionare i comuni da analizzare. Il progetto produce tre versioni:
+
+- capoluoghi di regione;
+- regioni;
+- province, citta' metropolitane e liberi consorzi.
+
+Le versioni regionali e provinciali sono costruite aggregando i capoluoghi di provincia scaricati da OMI. Sono quindi proxy territoriali basate sui capoluoghi e non quotazioni ufficiali OMI gia' aggregate per regione o provincia.
+
+Nel progetto tutti i comuni selezionati sono trattati allo stesso modo: non vengono usate categorie preliminari per distinguere citta' "in pressione" e citta' di confronto.
+
+### Quotazioni OMI
+
+Le quotazioni OMI dell'Agenzia Entrate riportano intervalli di valori per zona OMI, tipologia immobiliare e stato conservativo. Per il focus locale vengono usate le destinazioni residenziali e, quando disponibile, lo stato conservativo normale.
+
+Nel progetto:
+
+- prezzi di vendita in euro/mq;
+- canoni di locazione in euro/mq per mese;
+- mediana semplice delle zone OMI del comune;
+- range tra zona meno cara e zona piu' cara del comune.
+
+Limite: le quotazioni OMI sono intervalli territoriali, non prezzi effettivi di transazione o canoni contrattuali. La mediana usata nel progetto non e' pesata per numero di abitazioni, transazioni, superficie, popolazione o disponibilita' effettiva sul mercato.
+
+### Reddito medio dichiarato comunale MEF
+
+Il reddito medio dichiarato comunale viene calcolato dagli open data MEF/Dipartimento Finanze come rapporto tra reddito complessivo dichiarato e frequenza del reddito complessivo.
+
+Nel progetto:
+
+- reddito medio dichiarato;
+- prezzo di 80 mq espresso in anni di reddito medio dichiarato;
+- esempi di affitto per 40, 50 e 60 mq, espressi in euro mensili e come quota del reddito medio dichiarato.
+
+Limite: il reddito dichiarato e' riferito ai contribuenti, non ai nuclei familiari. Non misura reddito disponibile equivalente, patrimonio, aiuti familiari, trasferimenti, evasione, composizione del nucleo o accesso al credito. Va quindi letto come proxy territoriale grezzo di pressione, non come misura definitiva di affordability. I canoni OMI sono quotazioni territoriali per zona e non coincidono con i canoni richiesti negli annunci immobiliari.
 
 ## Fonti metodologiche principali
 

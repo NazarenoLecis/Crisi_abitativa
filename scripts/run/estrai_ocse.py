@@ -1,5 +1,5 @@
 import argparse
-from api import scarica_ocse
+from scripts.helpers.api import scarica_ocse
 
 
 parser = argparse.ArgumentParser(description="Estrae via API gli indicatori abitativi OCSE disponibili.")

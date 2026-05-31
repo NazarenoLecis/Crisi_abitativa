@@ -2,7 +2,8 @@
 
 Script per studiare la crisi abitativa usando API pubbliche.
 
-Il progetto e' organizzato in modo semplice: tutto il codice Python sta in `scripts/`.
+Il progetto e' organizzato in modo semplice: i comandi stanno in `scripts/run/`, mentre il codice
+riusabile sta in `scripts/helpers/`.
 
 ## Setup
 
@@ -17,25 +18,39 @@ pip install -r requirements.txt
 Estrarre le serie disponibili per tutti i paesi OCSE:
 
 ```bash
-python3 scripts/estrai_ocse.py
+python3 -m scripts.run.estrai_ocse
 ```
 
 Confrontare paesi OCSE scelti:
 
 ```bash
-python3 scripts/analisi_paesi.py --paesi ITA DEU FRA ESP
+python3 -m scripts.run.analisi_paesi --paesi ITA DEU FRA ESP
 ```
 
 Approfondire l'Italia:
 
 ```bash
-python3 scripts/analisi_italia.py
+python3 -m scripts.run.analisi_italia
 ```
 
 Generare grafici:
 
 ```bash
-python3 scripts/genera_grafici.py
+python3 -m scripts.run.genera_grafici
+```
+
+Generare solo il focus locale sui capoluoghi italiani:
+
+```bash
+python3 -m scripts.run.focus_locale_italia
+```
+
+Generare una sola versione del focus locale:
+
+```bash
+python3 -m scripts.run.focus_locale_italia --versione capoluoghi-regione
+python3 -m scripts.run.focus_locale_italia --versione regioni
+python3 -m scripts.run.focus_locale_italia --versione province
 ```
 
 Consultare il glossario metodologico degli indicatori:
@@ -44,24 +59,12 @@ Consultare il glossario metodologico degli indicatori:
 docs/definizioni.md
 ```
 
-Verificare il rendimento del BTP guida a 30 anni come indicatore dei tassi lunghi:
-
-```bash
-python3 scripts/verifica_btp_30_anni.py
-```
-
-Verificare i TEGM sui mutui ipotecari:
-
-```bash
-python3 scripts/verifica_tassi_mutui_tegm.py
-```
-
 I grafici vengono salvati in sottocartelle di `outputs/charts/`:
 
 - `outputs/charts/eurostat/confronti/`
-- `outputs/charts/eurostat/non_confrontabili/`
+- `outputs/charts/eurostat/italia/`
+- `outputs/charts/italia_locale/`
 - `outputs/charts/oecd/confronti/`
-- `outputs/charts/banca_italia/`
 
 I grafici con banda min-max salvano anche un CSV in `outputs/summary/` con paese minimo,
 paese massimo, valore Italia ed eventuale valore EU27 per ogni periodo.
@@ -105,22 +108,45 @@ Shortage e offerta:
 - abitazioni per 1.000 abitanti e abitazioni per famiglia privata;
 - quote di stock costruito prima del 1981 e dal 2001 in poi.
 
+## Focus Locale Italia
+
+Il focus locale sui capoluoghi italiani usa:
+
+- lista dei comuni da ISTAT, con default sui capoluoghi di provincia, citta' metropolitane e liberi consorzi;
+- quotazioni OMI Agenzia Entrate per prezzi di vendita e canoni di locazione;
+- redditi dichiarati comunali MEF/Dipartimento Finanze;
+- mediana semplice delle zone OMI del comune, senza pesi per transazioni, stock o superficie.
+
+Il comando produce tre versioni: capoluoghi di regione, regioni e province. Le versioni regionali
+e provinciali sono aggregazioni dei capoluoghi di provincia scaricati da OMI, quindi vanno lette
+come proxy territoriali basate sui capoluoghi e non come quotazioni ufficiali aggregate da OMI.
+
+Tutti i comuni inclusi sono trattati allo stesso modo: non ci sono categorie o colori basati su
+ipotesi preliminari.
+
+Output:
+
+- `outputs/charts/italia_locale/capoluoghi_regione/`
+- `outputs/charts/italia_locale/regioni/`
+- `outputs/charts/italia_locale/province/`
+- `outputs/summary/italia_locale/`
+
 ## File
 
 - `docs/definizioni.md`: glossario metodologico degli indicatori usati nel progetto.
-- `scripts/config.py`: lista degli indicatori e dei filtri API.
-- `scripts/api.py`: funzioni per scaricare dati Eurostat e OECD.
-- `scripts/utils.py`: funzioni generiche riusabili.
-- `scripts/grafici.py`: funzioni di plotting.
-- `scripts/grafici_europei.py`: confronti Italia-UE sui principali indicatori abitativi.
-- `scripts/grafici_oecd.py`: confronti OECD sui prezzi delle case.
-- `scripts/grafici_oecd_affordable.py`: grafici da OECD Affordable Housing Database.
-- `scripts/verifica_btp_30_anni.py`: verifica extra del BTP guida a 30 anni come indicatore dei tassi lunghi.
-- `scripts/verifica_tassi_mutui_tegm.py`: verifica extra dei TEGM sui mutui ipotecari.
-- `scripts/estrai_ocse.py`: panoramica OCSE.
-- `scripts/analisi_paesi.py`: confronto tra paesi scelti.
-- `scripts/analisi_italia.py`: approfondimento Italia.
-- `scripts/genera_grafici.py`: produzione dei grafici.
+- `scripts/helpers/config.py`: lista degli indicatori e dei filtri API.
+- `scripts/helpers/api.py`: funzioni per scaricare dati Eurostat e OECD.
+- `scripts/helpers/utils.py`: funzioni generiche riusabili.
+- `scripts/helpers/grafici.py`: funzioni di plotting Eurostat e grafici base.
+- `scripts/helpers/grafici_europei.py`: confronti Italia-UE sui principali indicatori abitativi.
+- `scripts/helpers/grafici_locali_italia.py`: focus locale sui capoluoghi italiani con ISTAT, OMI e redditi MEF.
+- `scripts/helpers/grafici_oecd.py`: confronti OECD sui prezzi delle case.
+- `scripts/helpers/grafici_oecd_affordable.py`: grafici da OECD Affordable Housing Database.
+- `scripts/run/estrai_ocse.py`: panoramica OCSE.
+- `scripts/run/analisi_paesi.py`: confronto tra paesi scelti.
+- `scripts/run/analisi_italia.py`: approfondimento Italia.
+- `scripts/run/genera_grafici.py`: produzione dei grafici.
+- `scripts/run/focus_locale_italia.py`: produzione del solo focus locale Italia.
 
 ## Fonti
 
@@ -135,6 +161,8 @@ Shortage e offerta:
 - Banca d'Italia, mercato finanziario e BDS tavola BMK0100: https://www.bancaditalia.it/statistiche/tematiche/moneta-intermediari-finanza/mercati/index.html
 - Banca d'Italia, Tassi Effettivi Globali Medi (TEGM): https://www.bancaditalia.it/compiti/vigilanza/compiti-vigilanza/tegm/
 - Banca d'Italia, QEF 17, Prices of residential property in Italy: Constructing a new indicator: https://www.bancaditalia.it/pubblicazioni/qef/2008-0017/QEF_17.pdf
+- Agenzia Entrate, consultazione quotazioni OMI: https://www1.agenziaentrate.gov.it/servizi/geopoi_omi/
+- MEF Dipartimento Finanze, open data dichiarazioni redditi comunali: https://www1.finanze.gov.it/finanze/analisi_stat/public/index.php?opendata=yes
 
 I confronti Italia-UE includono anche i nuclei informativi dei country fact sheet della
 Commissione europea: prezzi/affitti/redditi/inflazione, investimenti, permessi di costruzione,
@@ -150,22 +178,25 @@ prezzi casa EU27 da Eurostat `prc_hpi_a`, prezzi casa Italia estesi da OECD
 
 ## Nota metodologica
 
-I tempi medi di rilascio permessi e di costruzione non risultano disponibili come serie armonizzata unica nei dataset Eurostat/OECD usati qui. Per ora vengono usati proxy osservabili: permessi edilizi, produzione nelle costruzioni, investimenti e stock abitativo per periodo di costruzione. Se troviamo una fonte amministrativa comparabile sui tempi effettivi, si puo' aggiungere in `scripts/config.py`.
+I tempi medi di rilascio permessi e di costruzione non risultano disponibili come serie armonizzata unica nei dataset Eurostat/OECD usati qui. Per ora vengono usati proxy osservabili: permessi edilizi, produzione nelle costruzioni, investimenti e stock abitativo per periodo di costruzione. Se troviamo una fonte amministrativa comparabile sui tempi effettivi, si puo' aggiungere in `scripts/helpers/config.py`.
 
-Per il tasso a 30 anni non esiste una serie pubblica omogenea di EurIRS dal 1970. Lo script
-`scripts/verifica_btp_30_anni.py` usa quindi solo una serie coerente con la scadenza richiesta:
-Banca d'Italia BDS, tavola `BMK0100`, BTP guida 30 anni, rendimento lordo a scadenza. La serie
-parte dalla prima osservazione disponibile, senza disegnare anni vuoti prima dei dati. Il QEF 17
-della Banca d'Italia aiuta a interpretare il proxy: il paper collega il ciclo dei prezzi delle
-abitazioni al costo del denaro, alla diffusione dei mutui e al ruolo dell'abitazione nella
-ricchezza delle famiglie. Il BTP 30 anni e' quindi utile per il contesto macro-finanziario della
-pressione dei tassi lunghi, ma non misura direttamente il tasso IRS/EurIRS contrattuale applicato
-ai mutui.
+Per il tasso a 30 anni non esiste una serie pubblica omogenea di EurIRS dal 1970. Una fonte coerente
+con la scadenza richiesta e' Banca d'Italia BDS, tavola `BMK0100`, BTP guida 30 anni, rendimento
+lordo a scadenza. Il QEF 17 della Banca d'Italia aiuta a interpretare il proxy: il paper collega il
+ciclo dei prezzi delle abitazioni al costo del denaro, alla diffusione dei mutui e al ruolo
+dell'abitazione nella ricchezza delle famiglie. Il BTP 30 anni e' quindi utile per il contesto
+macro-finanziario della pressione dei tassi lunghi, ma non misura direttamente il tasso IRS/EurIRS
+contrattuale applicato ai mutui.
 
-Lo script `scripts/verifica_tassi_mutui_tegm.py` usa la serie storica TEGM della Banca d'Italia
-per osservare direttamente il tasso effettivo globale medio sui mutui ipotecari. La classificazione
-e' unica fino al secondo trimestre 2004, poi distingue mutui a tasso fisso e mutui a tasso variabile:
-per questo il grafico principale parte dal 2004-Q3 e mostra solo le due serie confrontabili. Lo
-script crea anche un grafico storico separato con la classificazione pre-2004 indicata come contesto.
-Il TEGM e' utile come misura diretta del costo effettivo medio rilevato per la normativa antiusura,
-ma non coincide con il TAN o con l'EurIRS usato nel pricing del singolo contratto.
+La serie storica TEGM della Banca d'Italia permette di osservare direttamente il tasso effettivo
+globale medio sui mutui ipotecari. La classificazione e' unica fino al secondo trimestre 2004, poi
+distingue mutui a tasso fisso e mutui a tasso variabile. Il TEGM e' utile come misura diretta del
+costo effettivo medio rilevato per la normativa antiusura, ma non coincide con il TAN o con l'EurIRS
+usato nel pricing del singolo contratto.
+
+Il focus locale Italia usa le quotazioni OMI come misura del livello territoriale dei prezzi e dei
+canoni. Gli indicatori di affordability locale sono proxy: il prezzo di 80 mq e gli esempi di
+affitto per 40, 50 e 60 mq vengono rapportati al reddito medio dichiarato comunale MEF. Il reddito
+dichiarato e' per contribuente, non per nucleo familiare, e la mediana OMI comunale non e' pesata
+per numero di abitazioni, transazioni o popolazione residente nelle zone. I canoni OMI non sono
+canoni di offerta degli annunci immobiliari.

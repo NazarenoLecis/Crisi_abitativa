@@ -1,6 +1,6 @@
 import argparse
-from api import scarica_ocse
-from utils import stampa_ultimi_valori
+from scripts.helpers.api import scarica_ocse
+from scripts.helpers.utils import stampa_ultimi_valori
 
 
 parser = argparse.ArgumentParser(description="Confronta paesi OCSE scelti usando direttamente le API OECD.")

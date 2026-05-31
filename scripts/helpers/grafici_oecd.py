@@ -2,8 +2,8 @@ from io import StringIO
 from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
-from grafici import COLORE_ITALIA, COLORE_PRINCIPALE, formatta_asse_y, periodo_to_datetime, salva_figura
-from utils import OECD_BASE_URL, WATERMARK, scarica_testo
+from scripts.helpers.grafici import COLORE_ITALIA, COLORE_PRINCIPALE, formatta_asse_y, periodo_to_datetime, salva_figura
+from scripts.helpers.utils import OECD_BASE_URL, WATERMARK, scarica_testo
 
 
 PAESI_DEFAULT = ["ITA", "FRA", "DEU", "ESP", "NLD", "PRT", "GRC", "USA", "GBR"]

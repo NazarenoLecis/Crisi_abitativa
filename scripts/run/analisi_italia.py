@@ -1,5 +1,5 @@
-from api import scarica_italia
-from utils import latest_value
+from scripts.helpers.api import scarica_italia
+from scripts.helpers.utils import latest_value
 
 dati = scarica_italia()
 

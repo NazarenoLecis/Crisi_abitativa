@@ -4,8 +4,8 @@ import warnings
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter, ScalarFormatter
 import pandas as pd
-from grafici import COLORE_EU27, COLORE_ITALIA, COLORE_PRINCIPALE, formatta_asse_y
-from utils import WATERMARK, scarica_bytes
+from scripts.helpers.grafici import COLORE_EU27, COLORE_ITALIA, COLORE_PRINCIPALE, formatta_asse_y
+from scripts.helpers.utils import WATERMARK, scarica_bytes
 
 
 OECD_AHD_BASE_URL = "https://webfs.oecd.org/Els-com/Affordable_Housing_Database"

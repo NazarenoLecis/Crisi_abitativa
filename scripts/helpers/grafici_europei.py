@@ -5,9 +5,9 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from config import EU27_CODES
-from grafici_oecd import scarica_prezzi_case_oecd
-from grafici import (
+from scripts.helpers.config import EU27_CODES
+from scripts.helpers.grafici_oecd import scarica_prezzi_case_oecd
+from scripts.helpers.grafici import (
     aggiungi_nota_min_max,
     COLORE_BANDA,
     COLORE_EU27,
@@ -18,7 +18,7 @@ from grafici import (
     periodo_comune,
     periodo_to_datetime,
 )
-from utils import (
+from scripts.helpers.utils import (
     EUROSTAT_BASE_URL,
     WATERMARK,
     codice_paese_iso3,
@@ -387,7 +387,7 @@ def grafico_banda_europeo(dataset_code, filtri, titolo, nome_file, cartella_outp
     if italia.empty or eu27.empty:
         return None
 
-    _, summary_min_max = salva_min_max_summary(
+    risultato_summary = salva_min_max_summary(
         serie_summary,
         cartella_output,
         "eurostat",
@@ -396,6 +396,7 @@ def grafico_banda_europeo(dataset_code, filtri, titolo, nome_file, cartella_outp
         paesi_esclusi={"EU27_2020", "EU", "EA20", "EA19"},
         min_paesi=8,
     )
+    summary_min_max = risultato_summary[1]
 
     figura, asse = plt.subplots(figsize=(9.2, 5.5))
     disegna_banda_linee(asse, banda, italia, eu27, percentuale=percentuale)
@@ -602,7 +603,7 @@ def grafico_overburden_inquilini(cartella_output):
         return None
 
     nome_file = "italia_ue_sovraccarico_costi_inquilini.png"
-    _, summary_min_max = salva_min_max_summary(
+    risultato_summary = salva_min_max_summary(
         serie_summary,
         cartella_output,
         "eurostat",
@@ -611,6 +612,7 @@ def grafico_overburden_inquilini(cartella_output):
         paesi_esclusi={"EU27_2020", "EU", "EA20", "EA19"},
         min_paesi=8,
     )
+    summary_min_max = risultato_summary[1]
 
     figura, asse = plt.subplots(figsize=(9.2, 5.5))
     disegna_banda_linee(asse, banda, italia, eu27, percentuale=True)

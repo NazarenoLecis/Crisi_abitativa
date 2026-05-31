@@ -1,7 +1,7 @@
 import pandas as pd
 from io import StringIO
-from config import EU27_CODES, EUROSTAT_INDICATORS, OECD_INDICATORS
-from utils import (
+from scripts.helpers.config import EU27_CODES, EUROSTAT_INDICATORS, OECD_INDICATORS
+from scripts.helpers.utils import (
     EUROSTAT_BASE_URL,
     OECD_BASE_URL,
     codice_paese_iso3,
