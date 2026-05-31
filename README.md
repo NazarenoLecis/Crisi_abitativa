@@ -46,6 +46,14 @@ Generare solo il focus locale sui capoluoghi italiani:
 python3 -m scripts.run.focus_locale_italia
 ```
 
+Generare mappe regionali a livello di singolo comune:
+
+```bash
+python3 -m scripts.run.mappe_comunali_italia
+python3 -m scripts.run.mappe_comunali_italia --regione Sardegna
+python3 -m scripts.run.mappe_comunali_italia --regione tutte
+```
+
 Generare una sola versione del focus locale:
 
 ```bash
@@ -75,6 +83,7 @@ I grafici vengono salvati in sottocartelle di `outputs/charts/`:
 - `outputs/charts/italia_locale/`
 - `outputs/charts/italia_locale/mappe_regioni/`
 - `outputs/charts/italia_locale/mappe_province/`
+- `outputs/charts/italia_locale/mappe_comunali/`
 - `outputs/charts/italia_locale/borsino/`
 - `outputs/charts/oecd/confronti/`
 
@@ -137,6 +146,12 @@ i PNG territoriali della versione provinciale sono mappe regionali calcolate com
 province disponibili in ogni regione e mappe nazionali con confini provinciali per gli stessi
 indicatori.
 
+Il progetto include anche mappe regionali a livello di singolo comune. Il comando genera di
+default tutte le regioni, scaricando OMI per ogni comune e unendo i redditi MEF. Per fare test
+rapidi si puo' usare `--regione Sardegna` o un'altra regione specifica. Per evitare mismatch
+dovuti ai riassetti provinciali, l'aggancio con i confini comunali openpolis usa il codice
+catastale del comune.
+
 Tutti i comuni inclusi sono trattati allo stesso modo: non ci sono categorie o colori basati su
 ipotesi preliminari.
 
@@ -146,6 +161,7 @@ Output:
 - `outputs/charts/italia_locale/regioni/`
 - `outputs/charts/italia_locale/mappe_regioni/`
 - `outputs/charts/italia_locale/mappe_province/`
+- `outputs/charts/italia_locale/mappe_comunali/`
 - `outputs/summary/italia_locale/`
 
 ### Sezione aggiuntiva Borsino
@@ -179,6 +195,7 @@ Output:
 - `scripts/helpers/grafici.py`: funzioni di plotting Eurostat e grafici base.
 - `scripts/helpers/grafici_europei.py`: confronti Italia-UE sui principali indicatori abitativi.
 - `scripts/helpers/grafici_locali_italia.py`: focus locale sui capoluoghi italiani con ISTAT, OMI e redditi MEF.
+- `scripts/helpers/mappe_comunali_italia.py`: mappe regionali a livello di singolo comune.
 - `scripts/helpers/borsino.py`: focus locale aggiuntivo con API BorsinoPro/Borsino Immobiliare.
 - `scripts/helpers/grafici_oecd.py`: confronti OECD sui prezzi delle case.
 - `scripts/helpers/grafici_oecd_affordable.py`: grafici da OECD Affordable Housing Database.
@@ -187,6 +204,7 @@ Output:
 - `scripts/run/analisi_italia.py`: approfondimento Italia.
 - `scripts/run/genera_grafici.py`: produzione dei grafici.
 - `scripts/run/focus_locale_italia.py`: produzione del solo focus locale Italia.
+- `scripts/run/mappe_comunali_italia.py`: produzione delle mappe comunali regionali, default tutte le regioni.
 - `scripts/run/focus_borsino_italia.py`: produzione del focus locale aggiuntivo Borsino.
 
 ## Fonti

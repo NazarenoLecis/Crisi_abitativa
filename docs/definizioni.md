@@ -286,6 +286,8 @@ Il focus locale usa il file ISTAT dei comuni italiani per selezionare i comuni d
 
 Le versioni regionali e provinciali sono costruite aggregando i capoluoghi di provincia scaricati da OMI. Sono quindi proxy territoriali basate sui capoluoghi e non quotazioni ufficiali OMI gia' aggregate per regione o provincia.
 
+Le mappe comunali regionali sono invece costruite scaricando OMI per ogni singolo comune della regione selezionata, oppure per tutte le regioni. Per collegare dati e geometrie viene usato il codice catastale del comune, piu' stabile dei codici ISTAT comunali quando cambiano i confini o le denominazioni provinciali.
+
 Nel progetto tutti i comuni selezionati sono trattati allo stesso modo: non vengono usate categorie preliminari per distinguere citta' "in pressione" e citta' di confronto.
 
 ### Quotazioni OMI
