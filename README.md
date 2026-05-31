@@ -64,6 +64,7 @@ I grafici vengono salvati in sottocartelle di `outputs/charts/`:
 - `outputs/charts/eurostat/confronti/`
 - `outputs/charts/eurostat/italia/`
 - `outputs/charts/italia_locale/`
+- `outputs/charts/italia_locale/mappe_regioni/`
 - `outputs/charts/oecd/confronti/`
 
 I grafici con banda min-max salvano anche un CSV in `outputs/summary/` con paese minimo,
@@ -120,6 +121,9 @@ Il focus locale sui capoluoghi italiani usa:
 Il comando produce tre versioni: capoluoghi di regione, regioni e province. Le versioni regionali
 e provinciali sono aggregazioni dei capoluoghi di provincia scaricati da OMI, quindi vanno lette
 come proxy territoriali basate sui capoluoghi e non come quotazioni ufficiali aggregate da OMI.
+Il dettaglio provinciale viene salvato in CSV; per evitare grafici illeggibili con troppe barre,
+i PNG territoriali della versione provinciale sono mappe regionali calcolate come mediana delle
+province disponibili in ogni regione.
 
 Tutti i comuni inclusi sono trattati allo stesso modo: non ci sono categorie o colori basati su
 ipotesi preliminari.
@@ -128,7 +132,7 @@ Output:
 
 - `outputs/charts/italia_locale/capoluoghi_regione/`
 - `outputs/charts/italia_locale/regioni/`
-- `outputs/charts/italia_locale/province/`
+- `outputs/charts/italia_locale/mappe_regioni/`
 - `outputs/summary/italia_locale/`
 
 ## File
@@ -160,6 +164,7 @@ Output:
 - DG ECFIN AMECO database: https://economy-finance.ec.europa.eu/economic-research-and-databases/economic-databases/ameco-database_en
 - Agenzia Entrate, consultazione quotazioni OMI: https://www1.agenziaentrate.gov.it/servizi/geopoi_omi/
 - MEF Dipartimento Finanze, open data dichiarazioni redditi comunali: https://www1.finanze.gov.it/finanze/analisi_stat/public/index.php?opendata=yes
+- openpolis GeoJSON confini regionali: https://github.com/openpolis/geojson-italy
 
 I confronti Italia-UE includono anche i nuclei informativi dei country fact sheet della
 Commissione europea: prezzi/affitti/redditi/inflazione, investimenti, permessi di costruzione,
