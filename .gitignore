@@ -24,10 +24,8 @@ dist/
 .vscode/
 
 # Generated outputs
-outputs/charts/*.png
-outputs/charts/**/*.png
-outputs/summary/*.csv
-outputs/summary/**/*.csv
+outputs/**/*.png
+outputs/**/*.csv
 
 # OS files
 .DS_Store

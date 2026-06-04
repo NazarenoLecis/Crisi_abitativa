@@ -12,7 +12,7 @@ from scripts.helpers.mappe_comunali_italia import crea_mappe_comunali_tutte_regi
 parser = argparse.ArgumentParser(
     description="Genera mappe regionali a livello comunale usando OMI, ISTAT e redditi MEF."
 )
-parser.add_argument("--output", default="outputs/charts", help="Cartella dove salvare i PNG.")
+parser.add_argument("--output", default="outputs", help="Cartella dove salvare PNG e CSV per paese.")
 parser.add_argument(
     "--regione",
     default="tutte",

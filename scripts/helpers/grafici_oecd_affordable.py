@@ -1,10 +1,12 @@
 from io import BytesIO
-from pathlib import Path
+from functools import lru_cache
+import textwrap
 import warnings
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter, ScalarFormatter
 import pandas as pd
-from scripts.helpers.grafici import COLORE_EU27, COLORE_ITALIA, COLORE_PRINCIPALE, formatta_asse_y
+from scripts.helpers.grafici import COLORE_EU27, COLORE_PRINCIPALE, formatta_asse_y
+from scripts.helpers.paesi import cartella_paese, normalizza_codici_paesi, profilo_paese
 from scripts.helpers.utils import WATERMARK, scarica_bytes
 
 
@@ -80,12 +82,11 @@ INDICATORI_BARRE = [
 ]
 
 
-def cartella_oecd_affordable(cartella_output):
-    cartella = Path(cartella_output) / "oecd" / "confronti"
-    cartella.mkdir(parents=True, exist_ok=True)
-    return cartella
+def cartella_oecd_affordable(cartella_output, paese_focus="ITA"):
+    return cartella_paese(cartella_output, paese_focus, "confronti")
 
 
+@lru_cache(maxsize=None)
 def leggi_foglio_oecd_ahd(nome_file, foglio):
     url = f"{OECD_AHD_BASE_URL}/{nome_file}"
     contenuto = scarica_bytes(url)
@@ -125,9 +126,10 @@ def estrai_indicatore_barre(indicatore):
     return tabella.sort_values("value")
 
 
-def colore_barra(paese):
-    if paese == "Italy":
-        return COLORE_ITALIA
+def colore_barra(paese, paese_focus="ITA"):
+    profilo = profilo_paese(paese_focus)
+    if paese == profilo["nome_oecd_ahd"]:
+        return profilo["colore"]
     if paese in {"EU", "OECD"}:
         return COLORE_EU27
     return COLORE_PRINCIPALE
@@ -164,6 +166,10 @@ def titolo_barre(indicatore, dati):
     return f"{indicatore['nome']}, {indicatore['anno_titolo']}"
 
 
+def titolo_su_piu_righe(titolo, larghezza=68):
+    return "\n".join(textwrap.wrap(titolo, width=larghezza, break_long_words=False))
+
+
 def etichette_paesi_barre(indicatore, dati):
     anni = anni_disponibili_barre(dati)
     if len(anni) <= 1:
@@ -194,34 +200,36 @@ def salva_grafico(figura, percorso):
     plt.close(figura)
 
 
-def grafico_barre_orizzontali(indicatore, dati, cartella_output):
+def grafico_barre_orizzontali(indicatore, dati, cartella_output, paese_focus="ITA"):
     if dati.empty:
         return None
 
     altezza = max(6, min(15, 0.28 * len(dati) + 1.8))
     figura, asse = plt.subplots(figsize=(10, altezza))
-    colori = [colore_barra(paese) for paese in dati["paese"]]
+    colori = [colore_barra(paese, paese_focus=paese_focus) for paese in dati["paese"]]
     asse.barh(etichette_paesi_barre(indicatore, dati), dati["value"], color=colori)
-    asse.set_title(titolo_barre(indicatore, dati), fontsize=15, fontweight="bold", loc="left", pad=10)
+    asse.set_title(titolo_su_piu_righe(titolo_barre(indicatore, dati)), fontsize=14, fontweight="bold", loc="left", pad=10)
     asse.set_xlabel(indicatore["asse_x"])
     asse.grid(axis="x", alpha=0.22)
     asse.spines["top"].set_visible(False)
     asse.spines["right"].set_visible(False)
 
     if indicatore["percentuale"]:
-        asse.xaxis.set_major_formatter(FuncFormatter(lambda valore, posizione: f"{valore:.0f}%"))
+        decimali = 1 if dati["value"].max() < 10 else 0
+        asse.xaxis.set_major_formatter(FuncFormatter(lambda valore, posizione: f"{valore:.{decimali}f}%"))
     else:
         formatter = ScalarFormatter(useOffset=False)
         formatter.set_scientific(False)
         asse.xaxis.set_major_formatter(formatter)
 
     aggiungi_footer(figura)
-    percorso = cartella_oecd_affordable(cartella_output) / indicatore["nome_file"]
+    percorso = cartella_oecd_affordable(cartella_output, paese_focus) / indicatore["nome_file"]
     salva_grafico(figura, percorso)
     return percorso
 
 
-def estrai_spesa_abitativa_consumi():
+def estrai_spesa_abitativa_consumi(paese_focus="ITA"):
+    profilo = profilo_paese(paese_focus)
     foglio = leggi_foglio_oecd_ahd(
         "HC1-1-Housing-related-expenditure-of-households.xlsx",
         "Figure HC1.1.2",
@@ -236,7 +244,7 @@ def estrai_spesa_abitativa_consumi():
             colonne_anni.append(posizione)
 
     righe = []
-    paesi = {"Italy": "Italia", "EU": "EU", "OECD": "OECD"}
+    paesi = {profilo["nome_oecd_ahd"]: profilo["label"], "EU": "EU", "OECD": "OECD"}
     for posizione_riga in range(3, len(foglio)):
         paese = normalizza_paese(foglio.iat[posizione_riga, 10])
         if paese not in paesi:
@@ -259,12 +267,13 @@ def estrai_spesa_abitativa_consumi():
     return dati.sort_values(["paese", "data_plot"])
 
 
-def grafico_spesa_abitativa_consumi(cartella_output):
-    dati = estrai_spesa_abitativa_consumi()
+def grafico_spesa_abitativa_consumi(cartella_output, paese_focus="ITA"):
+    profilo = profilo_paese(paese_focus)
+    dati = estrai_spesa_abitativa_consumi(paese_focus=paese_focus)
     if dati.empty:
         return None
 
-    colori = {"Italia": COLORE_ITALIA, "EU": COLORE_EU27, "OECD": COLORE_PRINCIPALE}
+    colori = {profilo["label"]: profilo["colore"], "EU": COLORE_EU27, "OECD": COLORE_PRINCIPALE}
     figura, asse = plt.subplots(figsize=(10, 5.8))
     for paese, gruppo in dati.groupby("paese"):
         asse.plot(
@@ -284,29 +293,47 @@ def grafico_spesa_abitativa_consumi(cartella_output):
     asse.legend(frameon=False, loc="best")
     aggiungi_footer(figura)
 
-    percorso = cartella_oecd_affordable(cartella_output) / "oecd_ahd_spesa_abitativa_consumi_famiglie.png"
+    percorso = (
+        cartella_oecd_affordable(cartella_output, paese_focus)
+        / "oecd_ahd_spesa_abitativa_consumi_famiglie.png"
+    )
     salva_grafico(figura, percorso)
     return percorso
 
 
-def crea_grafici_oecd_affordable(cartella_output="outputs/charts", mostra_progresso=False):
+def crea_grafici_oecd_affordable(cartella_output="outputs/charts", mostra_progresso=False, paesi_confronto=None):
     percorsi = []
-    totale = len(INDICATORI_BARRE) + 1
+    paesi_focus = normalizza_codici_paesi(paesi_confronto)
+    totale = (len(INDICATORI_BARRE) + 1) * len(paesi_focus)
+    posizione_totale = 0
     for posizione, indicatore in enumerate(INDICATORI_BARRE, start=1):
-        if mostra_progresso:
-            print(f"[OECD AHD {posizione}/{totale}] Creo {indicatore['nome_file']}", flush=True)
-
         dati = estrai_indicatore_barre(indicatore)
-        percorso = grafico_barre_orizzontali(indicatore, dati, cartella_output)
+        for paese_focus in paesi_focus:
+            posizione_totale += 1
+            profilo = profilo_paese(paese_focus)
+            if mostra_progresso:
+                print(
+                    f"[OECD AHD {profilo['label']} {posizione_totale}/{totale}] Creo {indicatore['nome_file']}",
+                    flush=True,
+                )
+
+            percorso = grafico_barre_orizzontali(indicatore, dati, cartella_output, paese_focus=paese_focus)
+            if percorso:
+                percorsi.append(percorso)
+
+    for paese_focus in paesi_focus:
+        posizione_totale += 1
+        profilo = profilo_paese(paese_focus)
+        if mostra_progresso:
+            print(
+                f"[OECD AHD {profilo['label']} {posizione_totale}/{totale}] "
+                "Creo oecd_ahd_spesa_abitativa_consumi_famiglie.png",
+                flush=True,
+            )
+
+        percorso = grafico_spesa_abitativa_consumi(cartella_output, paese_focus=paese_focus)
         if percorso:
             percorsi.append(percorso)
-
-    if mostra_progresso:
-        print(f"[OECD AHD {totale}/{totale}] Creo oecd_ahd_spesa_abitativa_consumi_famiglie.png", flush=True)
-
-    percorso = grafico_spesa_abitativa_consumi(cartella_output)
-    if percorso:
-        percorsi.append(percorso)
 
     if mostra_progresso:
         print(f"OECD Affordable Housing Database completato: {len(percorsi)} grafici creati.", flush=True)

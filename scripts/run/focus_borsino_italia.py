@@ -1,4 +1,12 @@
 import argparse
+from pathlib import Path
+import sys
+
+
+RADICE_PROGETTO = Path(__file__).resolve().parents[2]
+if str(RADICE_PROGETTO) not in sys.path:
+    sys.path.insert(0, str(RADICE_PROGETTO))
+
 from scripts.helpers.borsino import (
     BORSINO_API_KEY_ENV,
     BORSINO_TIPO_ABITAZIONI_CIVILI,
@@ -9,7 +17,7 @@ from scripts.helpers.borsino import (
 parser = argparse.ArgumentParser(
     description="Genera il focus locale italiano usando Borsino Immobiliare/BorsinoPro, ISTAT e redditi MEF."
 )
-parser.add_argument("--output", default="outputs/charts", help="Cartella dove salvare i PNG.")
+parser.add_argument("--output", default="outputs", help="Cartella dove salvare PNG e CSV per paese.")
 parser.add_argument(
     "--versione",
     default="capoluoghi-regione",

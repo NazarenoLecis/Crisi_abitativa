@@ -1,8 +1,8 @@
 from io import StringIO
-from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
-from scripts.helpers.grafici import COLORE_ITALIA, COLORE_PRINCIPALE, formatta_asse_y, periodo_to_datetime, salva_figura
+from scripts.helpers.grafici import formatta_asse_y, periodo_to_datetime, salva_figura
+from scripts.helpers.paesi import cartella_paese, normalizza_codici_paesi, profilo_paese
 from scripts.helpers.utils import OECD_BASE_URL, WATERMARK, scarica_testo
 
 
@@ -18,10 +18,8 @@ MISURE_PREZZI_CASE = [
 ]
 
 
-def cartella_oecd(cartella_output):
-    output = Path(cartella_output) / "oecd" / "confronti"
-    output.mkdir(parents=True, exist_ok=True)
-    return output
+def cartella_oecd(cartella_output, paese_focus="ITA"):
+    return cartella_paese(cartella_output, paese_focus, "confronti")
 
 
 def scarica_prezzi_case_oecd(paesi=None, misure=None, inizio=INIZIO_SERIE_OECD, fine="2024"):
@@ -103,17 +101,29 @@ def nota_base_oecd(serie, anno_base=ANNO_BASE_INDICI):
     return f"Base: {anno_base} quando disponibile; altrimenti primo anno disponibile nella serie."
 
 
-def grafico_linee_oecd(dati, misura, titolo, nome_file, cartella_output, anno_base=ANNO_BASE_INDICI):
+def grafico_linee_oecd(
+    dati,
+    misura,
+    titolo,
+    nome_file,
+    cartella_output,
+    anno_base=ANNO_BASE_INDICI,
+    paese_focus="ITA",
+    paesi_linee=None,
+):
+    profilo = profilo_paese(paese_focus)
     serie = dati.loc[dati["measure_code"] == misura].copy()
+    if paesi_linee is not None:
+        serie = serie.loc[serie["country_code"].isin(paesi_linee)].copy()
     if serie.empty:
         return None
 
     figura, asse = plt.subplots(figsize=(11, 6))
     for paese, gruppo in serie.groupby("country_code"):
         gruppo = gruppo.sort_values("data_plot")
-        colore = COLORE_ITALIA if paese == "ITA" else None
-        larghezza = 2.8 if paese == "ITA" else 1.7
-        alpha = 1 if paese == "ITA" else 0.72
+        colore = profilo["colore"] if paese == profilo["iso3"] else None
+        larghezza = 2.8 if paese == profilo["iso3"] else 1.7
+        alpha = 1 if paese == profilo["iso3"] else 0.72
         asse.plot(gruppo["data_plot"], gruppo["value"], label=paese, color=colore, linewidth=larghezza, alpha=alpha)
 
     etichetta_base = etichetta_base_oecd(serie, anno_base=anno_base)
@@ -145,26 +155,42 @@ def grafico_linee_oecd(dati, misura, titolo, nome_file, cartella_output, anno_ba
         alpha=0.82,
     )
 
-    percorso = cartella_oecd(cartella_output) / nome_file
+    percorso = cartella_oecd(cartella_output, paese_focus) / nome_file
     salva_figura(figura, percorso)
     return percorso
 
 
-def crea_grafici_oecd(cartella_output="outputs/charts", paesi=None, mostra_progresso=False):
+def crea_grafici_oecd(cartella_output="outputs/charts", paesi=None, mostra_progresso=False, paesi_confronto=None):
     if mostra_progresso:
         print("Scarico dati OECD DF_HOUSE_PRICES per confronti multi-paese.", flush=True)
 
-    dati = scarica_prezzi_case_oecd(paesi=paesi)
+    paesi_focus = normalizza_codici_paesi(paesi_confronto)
+    paesi_download = paesi or sorted(set(PAESI_DEFAULT) | set(paesi_focus))
+    dati = scarica_prezzi_case_oecd(paesi=paesi_download)
     dati = ribasa_indici_oecd(dati, ANNO_BASE_INDICI)
     percorsi = []
-    totale = len(MISURE_PREZZI_CASE)
-    for posizione, (misura, titolo, nome_file) in enumerate(MISURE_PREZZI_CASE, start=1):
-        if mostra_progresso:
-            print(f"[Confronti OECD {posizione}/{totale}] Creo {nome_file}", flush=True)
+    totale = len(MISURE_PREZZI_CASE) * len(paesi_focus)
+    posizione = 0
+    for paese_focus in paesi_focus:
+        profilo = profilo_paese(paese_focus)
+        paesi_linee = sorted(set(PAESI_DEFAULT) | {paese_focus})
+        for misura, titolo, nome_file in MISURE_PREZZI_CASE:
+            posizione += 1
+            if mostra_progresso:
+                print(f"[Confronti OECD {profilo['label']} {posizione}/{totale}] Creo {nome_file}", flush=True)
 
-        percorso = grafico_linee_oecd(dati, misura, titolo, nome_file, cartella_output, anno_base=ANNO_BASE_INDICI)
-        if percorso:
-            percorsi.append(percorso)
+            percorso = grafico_linee_oecd(
+                dati,
+                misura,
+                titolo,
+                nome_file,
+                cartella_output,
+                anno_base=ANNO_BASE_INDICI,
+                paese_focus=paese_focus,
+                paesi_linee=paesi_linee,
+            )
+            if percorso:
+                percorsi.append(percorso)
 
     if mostra_progresso:
         print(f"Confronti OECD completati: {len(percorsi)} grafici creati.", flush=True)

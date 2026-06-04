@@ -194,6 +194,30 @@ Nel progetto:
 
 Limite: possono aumentare per prezzi piu' alti dei lavori, non solo per maggiore quantita' costruita.
 
+### Indicatori locali Francia e Germania
+
+Le mappe Francia/Germania usano dati territoriali non perfettamente omogenei tra paesi, quindi vanno lette come focus nazionali separati e non come confronto diretto comune-per-comune.
+
+Francia:
+
+- gli affitti sono canoni di annuncio per appartamenti, espressi in euro/mq/mese, dalla "Carte des loyers" 2025;
+- i prezzi di vendita sono mediane DVF in euro/mq per appartamenti e case sul periodo disponibile nella risorsa `stats_whole_period`;
+- il reddito e' il livello di vita mediano comunale annuo;
+- il rapporto prezzo/reddito e' calcolato come `prezzo_mq * 80 / reddito_annuo`;
+- il rapporto affitto/reddito e' calcolato come `affitto_mq_mese * 40 * 12 / reddito_annuo`.
+
+Per Parigi, Lione e Marsiglia le fonti immobiliari sono pubblicate per arrondissement; il progetto le aggrega al codice comunale usando pesi di osservazioni/volumi disponibili.
+
+Germania:
+
+- gli indicatori sono disponibili a livello Kreise e citta-distretto, non a livello di singolo comune;
+- gli affitti sono Wiedervermietungsmieten inserierter Wohnungen (Angebotsmieten), espressi in euro/mq/mese;
+- il valore usato come proxy di "vendita" e' il Kaufwert fuer Bauland, cioe' valore medio di acquisto del suolo edificabile in euro/mq, non una quotazione residenziale di abitazioni;
+- il reddito INKAR e' Haushaltseinkommen in euro per abitante, annualizzato moltiplicando il valore mensile per 12;
+- i rapporti al reddito usano le stesse metrature esemplificative della Francia: 80 mq per il prezzo/proxy di vendita e 40 mq per l'affitto.
+
+Limite: la Germania non e' direttamente confrontabile con la Francia sul prezzo di vendita, perche' il dato tedesco misura Bauland e non transazioni di abitazioni.
+
 ## Offerta abitativa
 
 ### Permessi edilizi
@@ -320,6 +344,26 @@ Nel progetto:
 
 Limite: le quotazioni Borsino sono una fonte privata e richiedono autenticazione API. La metodologia esatta, la copertura territoriale e la composizione dei dati possono differire da OMI; per questo i grafici Borsino sono tenuti in una sezione separata e vanno letti come confronto informativo, non come serie ufficiale sostitutiva.
 
+### Affitti brevi e registro CIN
+
+Per locazione breve, nella definizione fiscale dell'Agenzia delle Entrate, si intende un contratto di locazione di immobile a uso abitativo con durata non superiore a 30 giorni, stipulato tra persone fisiche fuori dall'attivita' d'impresa. Nel progetto questa definizione serve come riferimento concettuale per isolare il tema dell'uso turistico e temporaneo dello stock abitativo.
+
+La fonte operativa usata nel progetto e' il registro CIN del Ministero del Turismo. Il nome tecnico della fonte e' BDSR, cioe' Banca Dati delle Strutture Ricettive e degli Immobili destinati a Locazione Breve o per finalita' turistiche. Il dato misura strutture registrate, non notti vendute, presenze turistiche o canoni effettivi.
+
+Nel progetto:
+
+- fonte: CSV pubblico del registro CIN del Ministero del Turismo;
+- quota locazioni brevi private su affitti totali (stima): locazioni private non imprenditoriali registrate divise per la somma tra locazioni private non imprenditoriali registrate e famiglie in affitto del censimento permanente ISTAT 2021;
+- quota B&B su abitazioni: B&B registrati divisi per le abitazioni totali comunali del censimento permanente ISTAT 2021;
+- quota hotel su abitazioni: hotel registrati divisi per le abitazioni totali comunali del censimento permanente ISTAT 2021.
+
+Limite: il registro CIN e' un registro amministrativo. Non distingue da solo una casa sottratta stabilmente al mercato degli affitti lunghi da una struttura saltuaria, non misura il tasso di occupazione e non consente di stimare il numero di notti turistiche. La quota su affitti totali e' una stima costruita con fonti diverse e non coincide con il numero completo di contratti di locazione attivi sul mercato.
+
+Limite degli indicatori per abitazione: il denominatore ISTAT misura lo stock abitativo comunale,
+non le abitazioni effettivamente disponibili sul mercato degli affitti lunghi. Dove il dato ISTAT
+non viene scaricato o non e' disponibile, il progetto non sostituisce il valore con proxy: lascia
+l'indicatore vuoto e colora il comune in grigio nelle mappe.
+
 ### Reddito medio dichiarato comunale MEF
 
 Il reddito medio dichiarato comunale viene calcolato dagli open data MEF/Dipartimento Finanze come rapporto tra reddito complessivo dichiarato e frequenza del reddito complessivo.
@@ -343,3 +387,7 @@ Limite: il reddito dichiarato e' riferito ai contribuenti, non ai nuclei familia
 - OECD, Residential Property Price Indices FAQ: https://www.oecd.org/en/data/insights/data-explainers/2024/07/Residential-Property-Price-Indices-and-related-housing-indicators-Frequently-Asked-Questions.html
 - OECD, Average annual wages: https://www.oecd.org/en/data/indicators/average-annual-wages.html
 - BorsinoPro/Borsino Immobiliare API quotazioni: https://api.borsinopro.it/api-quotazioni.html
+- Ministero del Turismo, registro CIN/BDSR: https://bdsr.ministeroturismo.gov.it/mappa-italia
+- ISTAT, famiglie per titolo di godimento - comuni: http://dati-censimentipermanenti.istat.it/Index.aspx?DataSetCode=DCSS_HUDW
+- ISTAT, dati per sezioni di censimento: https://www.istat.it/notizia/dati-per-sezioni-di-censimento/
+- Agenzia Entrate, FAQ locazioni brevi: https://infoprecompilata.agenziaentrate.gov.it/portale/w/faq-cosa-si-intende-per-locazione-breve-i-corrispettivi-certificati-tramite-intermediari-sono-riportati-nella-mia-dichiarazione-precompilata-

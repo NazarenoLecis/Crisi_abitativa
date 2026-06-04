@@ -3,6 +3,7 @@ import time
 import pandas as pd
 import pycountry
 import requests
+from scripts.helpers.paesi import SLUG_PAESI_CONFRONTO, radice_output
 
 
 EUROSTAT_BASE_URL = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data"
@@ -153,13 +154,19 @@ def stampa_ultimi_valori(frame):
 
 
 def cartella_summary(cartella_output, fonte, sezione=None):
-    radice_output = Path(cartella_output)
-    if radice_output.name == "charts":
-        radice_summary = radice_output.parent / "summary"
-    else:
-        radice_summary = radice_output / "summary"
+    radice = radice_output(cartella_output)
+    sezioni_italia = {
+        "italia_locale": ("italia", "summary", "locale"),
+        "italia_affitti_brevi": ("italia", "summary", "affitti_brevi"),
+    }
 
-    parti = [radice_summary, fonte]
+    if fonte in SLUG_PAESI_CONFRONTO:
+        parti = [radice, fonte, "summary"]
+    elif fonte in sezioni_italia:
+        parti = [radice, *sezioni_italia[fonte]]
+    else:
+        parti = [radice, "summary", fonte]
+
     if sezione:
         parti.append(sezione)
 
@@ -168,7 +175,7 @@ def cartella_summary(cartella_output, fonte, sezione=None):
     return cartella
 
 
-def crea_min_max_summary(frame, paesi_esclusi=None, min_paesi=1):
+def crea_min_max_summary(frame, paesi_esclusi=None, min_paesi=1, paese_focus="ITA", colonna_focus="italy_value"):
     colonne_vuote = [
         "time_period",
         "data_plot",
@@ -177,7 +184,7 @@ def crea_min_max_summary(frame, paesi_esclusi=None, min_paesi=1):
         "max_country",
         "max_value",
         "countries_count",
-        "italy_value",
+        colonna_focus,
         "eu27_value",
     ]
     if frame.empty:
@@ -215,15 +222,33 @@ def crea_min_max_summary(frame, paesi_esclusi=None, min_paesi=1):
     if summary.empty:
         return pd.DataFrame(columns=colonne_vuote)
 
-    valori_italia = dati.loc[dati["country_code"] == "ITA", ["data_plot", "value"]].rename(columns={"value": "italy_value"})
+    valori_focus = dati.loc[dati["country_code"] == paese_focus, ["data_plot", "value"]].rename(
+        columns={"value": colonna_focus}
+    )
     valori_eu27 = dati.loc[dati["country_code"] == "EU27_2020", ["data_plot", "value"]].rename(columns={"value": "eu27_value"})
-    summary = summary.merge(valori_italia, on="data_plot", how="left")
+    summary = summary.merge(valori_focus, on="data_plot", how="left")
     summary = summary.merge(valori_eu27, on="data_plot", how="left")
     return summary[colonne_vuote].sort_values("data_plot")
 
 
-def salva_min_max_summary(frame, cartella_output, fonte, sezione, nome_file, paesi_esclusi=None, min_paesi=1):
-    summary = crea_min_max_summary(frame, paesi_esclusi=paesi_esclusi, min_paesi=min_paesi)
+def salva_min_max_summary(
+    frame,
+    cartella_output,
+    fonte,
+    sezione,
+    nome_file,
+    paesi_esclusi=None,
+    min_paesi=1,
+    paese_focus="ITA",
+    colonna_focus="italy_value",
+):
+    summary = crea_min_max_summary(
+        frame,
+        paesi_esclusi=paesi_esclusi,
+        min_paesi=min_paesi,
+        paese_focus=paese_focus,
+        colonna_focus=colonna_focus,
+    )
     if summary.empty:
         return None, summary
 

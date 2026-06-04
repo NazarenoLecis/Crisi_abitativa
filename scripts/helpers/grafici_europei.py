@@ -7,11 +7,11 @@ import numpy as np
 import pandas as pd
 from scripts.helpers.config import EU27_CODES
 from scripts.helpers.grafici_oecd import scarica_prezzi_case_oecd
+from scripts.helpers.paesi import cartella_paese, normalizza_codici_paesi, profilo_paese
 from scripts.helpers.grafici import (
     aggiungi_nota_min_max,
     COLORE_BANDA,
     COLORE_EU27,
-    COLORE_ITALIA,
     COLORE_PRINCIPALE,
     formatta_asse_date,
     formatta_asse_y,
@@ -39,10 +39,8 @@ COLORE_ARANCIO = "#E76F51"
 PAESI_EUROPEI = EU27_CODES + ["EU27_2020"]
 
 
-def cartella_grafici_europei(cartella_output):
-    cartella = Path(cartella_output) / "eurostat" / "confronti"
-    cartella.mkdir(parents=True, exist_ok=True)
-    return cartella
+def cartella_grafici_europei(cartella_output, paese):
+    return cartella_paese(cartella_output, paese, "confronti")
 
 
 def scarica_eurostat_dettagliato(dataset_code, filtri, paesi):
@@ -84,11 +82,12 @@ def serie_ameco(frame, codice_indicatore, area_code):
     return pd.to_numeric(riga.iloc[0][anni], errors="coerce")
 
 
-def reddito_disponibile_ameco():
+def reddito_disponibile_ameco(paese_focus="ITA"):
+    profilo = profilo_paese(paese_focus)
     popolazione = scarica_ameco_capitolo(1)
     famiglie = scarica_ameco_capitolo(15)
     righe = []
-    paesi = {"ITA": "ITA", "EU27": "EU27_2020"}
+    paesi = {profilo["iso3"]: profilo["iso3"], "EU27": "EU27_2020"}
 
     for area_code, country_code in paesi.items():
         reddito = serie_ameco(famiglie, "UVGH", area_code)
@@ -111,12 +110,13 @@ def reddito_disponibile_ameco():
     return pd.DataFrame(righe)
 
 
-def prezzi_case_estesi():
-    prezzi_italia = scarica_prezzi_case_oecd(paesi=["ITA"], misure=["HPI"], inizio="2000", fine="2024")
-    prezzi_italia = prezzi_italia.loc[prezzi_italia["measure_code"] == "HPI"].copy()
-    prezzi_italia = prezzi_italia[["country_code", "time_period", "value"]]
-    prezzi_italia["source_dataset"] = "OECD DF_HOUSE_PRICES"
-    prezzi_italia["metrica"] = "Prezzi case"
+def prezzi_case_estesi(paese_focus="ITA"):
+    profilo = profilo_paese(paese_focus)
+    prezzi_paese = scarica_prezzi_case_oecd(paesi=[profilo["iso3"]], misure=["HPI"], inizio="2000", fine="2024")
+    prezzi_paese = prezzi_paese.loc[prezzi_paese["measure_code"] == "HPI"].copy()
+    prezzi_paese = prezzi_paese[["country_code", "time_period", "value"]]
+    prezzi_paese["source_dataset"] = "OECD DF_HOUSE_PRICES"
+    prezzi_paese["metrica"] = "Prezzi case"
 
     prezzi_eu27 = scarica_eurostat_dettagliato(
         "prc_hpi_a",
@@ -126,7 +126,7 @@ def prezzi_case_estesi():
     prezzi_eu27 = prezzi_eu27[["country_code", "time_period", "value", "source_dataset"]]
     prezzi_eu27["metrica"] = "Prezzi case"
 
-    return pd.concat([prezzi_italia, prezzi_eu27], ignore_index=True)
+    return pd.concat([prezzi_paese, prezzi_eu27], ignore_index=True)
 
 
 def applica_stile_grafici_europei(asse, percentuale=False):
@@ -152,6 +152,11 @@ def aggiungi_footer_grafici_europei(figura, fonte):
         fontsize=9,
         color="#333333",
     )
+
+
+def nome_file_paese(nome_file, paese_focus="ITA"):
+    profilo = profilo_paese(paese_focus)
+    return nome_file.replace("italia_ue", f"{profilo['nome_file']}_ue").replace("italia", profilo["nome_file"])
 
 
 def salva_grafico_europeo(figura, percorso):
@@ -260,30 +265,32 @@ def annota_ultimo_valore(asse, serie, suffisso="", decimali=1):
     )
 
 
-def prepara_banda(frame, inizio=None, fine=None):
+def prepara_banda(frame, paese_focus="ITA", inizio=None, fine=None):
+    profilo = profilo_paese(paese_focus)
     serie = filtra_periodo(frame, inizio=inizio, fine=fine)
     paesi = serie.loc[~serie["country_code"].isin({"EU27_2020", "EU", "EA20", "EA19"})].copy()
-    italia = serie.loc[serie["country_code"] == "ITA"].copy()
+    focus = serie.loc[serie["country_code"] == profilo["iso3"]].copy()
     eu27 = serie.loc[serie["country_code"] == "EU27_2020"].copy()
-    if italia.empty or eu27.empty:
-        return pd.DataFrame(), italia, eu27, pd.DataFrame()
+    if focus.empty or eu27.empty:
+        return pd.DataFrame(), focus, eu27, pd.DataFrame()
 
-    periodo = periodo_comune(italia, eu27)
+    periodo = periodo_comune(focus, eu27)
     if periodo is None:
-        return pd.DataFrame(), italia, eu27, pd.DataFrame()
+        return pd.DataFrame(), focus, eu27, pd.DataFrame()
 
     data_inizio, data_fine = periodo
     paesi = paesi.loc[(paesi["data_plot"] >= data_inizio) & (paesi["data_plot"] <= data_fine)]
-    italia = italia.loc[(italia["data_plot"] >= data_inizio) & (italia["data_plot"] <= data_fine)]
+    focus = focus.loc[(focus["data_plot"] >= data_inizio) & (focus["data_plot"] <= data_fine)]
     eu27 = eu27.loc[(eu27["data_plot"] >= data_inizio) & (eu27["data_plot"] <= data_fine)]
     serie_summary = pd.concat([paesi, eu27], ignore_index=True)
     banda = paesi.groupby("data_plot")["value"].agg(["min", "max", "count"]).reset_index()
     banda = banda.loc[banda["count"] >= 8].copy()
     banda["data_num"] = mdates.date2num(banda["data_plot"].to_numpy(dtype="datetime64[ms]"))
-    return banda, italia, eu27, serie_summary
+    return banda, focus, eu27, serie_summary
 
 
-def disegna_banda_linee(asse, banda, italia, eu27, percentuale=False):
+def disegna_banda_linee(asse, banda, focus, eu27, paese_focus="ITA", percentuale=False):
+    profilo = profilo_paese(paese_focus)
     if not banda.empty:
         asse.fill_between(
             banda["data_num"],
@@ -296,8 +303,14 @@ def disegna_banda_linee(asse, banda, italia, eu27, percentuale=False):
 
     if not eu27.empty:
         asse.plot(eu27["data_plot"], eu27["value"], color=COLORE_EU27, linewidth=2.1, label="EU27")
-    if not italia.empty:
-        asse.plot(italia["data_plot"], italia["value"], color=COLORE_ITALIA, linewidth=2.4, label="Italia")
+    if not focus.empty:
+        asse.plot(
+            focus["data_plot"],
+            focus["value"],
+            color=profilo["colore"],
+            linewidth=2.4,
+            label=profilo["label"],
+        )
 
     applica_stile_grafici_europei(asse, percentuale=percentuale)
 
@@ -318,9 +331,10 @@ def aggiungi_legenda_figura(figura, asse, colonne=2):
     )
 
 
-def grafico_prezzi_affitti_redditi_inflazione(cartella_output):
-    paesi = ["IT", "EU27_2020"]
-    prezzi_case = prezzi_case_estesi()
+def grafico_prezzi_affitti_redditi_inflazione(cartella_output, paese_focus="ITA"):
+    profilo = profilo_paese(paese_focus)
+    paesi = [profilo["iso2"], "EU27_2020"]
+    prezzi_case = prezzi_case_estesi(paese_focus=paese_focus)
 
     hicp = scarica_eurostat_dettagliato(
         "prc_hicp_aind",
@@ -329,7 +343,7 @@ def grafico_prezzi_affitti_redditi_inflazione(cartella_output):
     )
     hicp["metrica"] = hicp["coicop"].map({"CP041": "Affitti", "CP00": "Inflazione"})
 
-    reddito = reddito_disponibile_ameco()
+    reddito = reddito_disponibile_ameco(paese_focus=paese_focus)
 
     dati = pd.concat([prezzi_case, hicp, reddito], ignore_index=True)
     dati = dati.loc[dati["time_period"].astype(str).str.isdigit()].copy()
@@ -347,12 +361,12 @@ def grafico_prezzi_affitti_redditi_inflazione(cartella_output):
 
     figura, asse = plt.subplots(figsize=(9.8, 6.0))
     for metrica in ["Prezzi case", "Affitti", "Reddito", "Inflazione"]:
-        for paese in ["ITA", "EU27_2020"]:
+        for paese in [profilo["iso3"], "EU27_2020"]:
             serie = dati.loc[(dati["metrica"] == metrica) & (dati["country_code"] == paese)].sort_values("data_plot")
             if serie.empty:
                 continue
-            stile = "-" if paese == "ITA" else (0, (4, 4))
-            label_paese = "Italia" if paese == "ITA" else "EU27"
+            stile = "-" if paese == profilo["iso3"] else (0, (4, 4))
+            label_paese = profilo["label"] if paese == profilo["iso3"] else "EU27"
             asse.plot(
                 serie["data_plot"],
                 serie["value"],
@@ -373,85 +387,115 @@ def grafico_prezzi_affitti_redditi_inflazione(cartella_output):
         "Eurostat (prc_hpi_a, prc_hicp_aind), OECD (DF_HOUSE_PRICES), DG ECFIN AMECO (UVGH, NPTD)",
     )
 
-    percorso = cartella_grafici_europei(cartella_output) / "italia_ue_prezzi_affitti_redditi_inflazione.png"
+    percorso = (
+        cartella_grafici_europei(cartella_output, profilo)
+        / f"{profilo['nome_file']}_ue_prezzi_affitti_redditi_inflazione.png"
+    )
     salva_grafico_europeo(figura, percorso)
     return percorso
 
 
-def grafico_banda_europeo(dataset_code, filtri, titolo, nome_file, cartella_output, inizio=None, fine=None, percentuale=False):
+def grafico_banda_europeo(
+    dataset_code,
+    filtri,
+    titolo,
+    nome_file,
+    cartella_output,
+    inizio=None,
+    fine=None,
+    percentuale=False,
+    paese_focus="ITA",
+):
+    profilo = profilo_paese(paese_focus)
+    nome_file = nome_file_paese(nome_file, paese_focus)
     dati = scarica_eurostat_dettagliato(dataset_code, filtri, PAESI_EUROPEI)
     if dati.empty:
         return None
 
-    banda, italia, eu27, serie_summary = prepara_banda(dati, inizio=inizio, fine=fine)
-    if italia.empty or eu27.empty:
+    banda, focus, eu27, serie_summary = prepara_banda(dati, paese_focus=paese_focus, inizio=inizio, fine=fine)
+    if focus.empty or eu27.empty:
         return None
 
     risultato_summary = salva_min_max_summary(
         serie_summary,
         cartella_output,
-        "eurostat",
+        profilo["slug"],
         "confronti",
         nome_file,
         paesi_esclusi={"EU27_2020", "EU", "EA20", "EA19"},
         min_paesi=8,
+        paese_focus=profilo["iso3"],
+        colonna_focus=f"{profilo['slug']}_value",
     )
     summary_min_max = risultato_summary[1]
 
     figura, asse = plt.subplots(figsize=(9.2, 5.5))
-    disegna_banda_linee(asse, banda, italia, eu27, percentuale=percentuale)
+    disegna_banda_linee(asse, banda, focus, eu27, paese_focus=paese_focus, percentuale=percentuale)
     aggiungi_titolo(asse, titolo)
-    serie_asse = pd.concat([italia, eu27], ignore_index=True)
+    serie_asse = pd.concat([focus, eu27], ignore_index=True)
     if "-Q" in "".join(serie_asse["time_period"].astype(str).head(5).tolist()):
         formatta_trimestri(asse, serie_asse)
     else:
         formatta_anni_brevi(asse, serie_asse)
-    annota_ultimo_valore(asse, italia, suffisso="%" if percentuale else "", decimali=1)
+    annota_ultimo_valore(asse, focus, suffisso="%" if percentuale else "", decimali=1)
     annota_ultimo_valore(asse, eu27, suffisso="%" if percentuale else "", decimali=1)
     aggiungi_nota_min_max(asse, testo_min_max_ultimo_periodo(summary_min_max))
     aggiungi_legenda_figura(figura, asse, colonne=2)
     aggiungi_footer_grafici_europei(figura, f"Eurostat ({dataset_code})")
 
-    percorso = cartella_grafici_europei(cartella_output) / nome_file
+    percorso = cartella_grafici_europei(cartella_output, profilo) / nome_file
     salva_grafico_europeo(figura, percorso)
     return percorso
 
 
-def grafico_linee_europeo(dataset_code, filtri, titolo, nome_file, cartella_output, inizio=None, fine=None, percentuale=False):
-    dati = scarica_eurostat_dettagliato(dataset_code, filtri, ["IT", "EU27_2020"])
+def grafico_linee_europeo(
+    dataset_code,
+    filtri,
+    titolo,
+    nome_file,
+    cartella_output,
+    inizio=None,
+    fine=None,
+    percentuale=False,
+    paese_focus="ITA",
+):
+    profilo = profilo_paese(paese_focus)
+    nome_file = nome_file_paese(nome_file, paese_focus)
+    dati = scarica_eurostat_dettagliato(dataset_code, filtri, [profilo["iso2"], "EU27_2020"])
     if dati.empty:
         return None
 
     serie = filtra_periodo(dati, inizio=inizio, fine=fine)
-    italia = serie.loc[serie["country_code"] == "ITA"].copy()
+    focus = serie.loc[serie["country_code"] == profilo["iso3"]].copy()
     eu27 = serie.loc[serie["country_code"] == "EU27_2020"].copy()
-    if italia.empty or eu27.empty:
+    if focus.empty or eu27.empty:
         return None
 
-    periodo = periodo_comune(italia, eu27)
+    periodo = periodo_comune(focus, eu27)
     if periodo is not None:
         data_inizio, data_fine = periodo
-        italia = italia.loc[(italia["data_plot"] >= data_inizio) & (italia["data_plot"] <= data_fine)]
+        focus = focus.loc[(focus["data_plot"] >= data_inizio) & (focus["data_plot"] <= data_fine)]
         eu27 = eu27.loc[(eu27["data_plot"] >= data_inizio) & (eu27["data_plot"] <= data_fine)]
 
     figura, asse = plt.subplots(figsize=(9.2, 5.5))
     asse.plot(eu27["data_plot"], eu27["value"], color=COLORE_EU27, linewidth=2.1, label="EU27")
-    asse.plot(italia["data_plot"], italia["value"], color=COLORE_ITALIA, linewidth=2.4, label="Italia")
+    asse.plot(focus["data_plot"], focus["value"], color=profilo["colore"], linewidth=2.4, label=profilo["label"])
     aggiungi_titolo(asse, titolo)
     applica_stile_grafici_europei(asse, percentuale=percentuale)
-    serie_asse = pd.concat([italia, eu27], ignore_index=True)
+    serie_asse = pd.concat([focus, eu27], ignore_index=True)
     formatta_trimestri(asse, serie_asse)
-    annota_ultimo_valore(asse, italia, suffisso="%" if percentuale else "", decimali=0)
+    annota_ultimo_valore(asse, focus, suffisso="%" if percentuale else "", decimali=0)
     annota_ultimo_valore(asse, eu27, suffisso="%" if percentuale else "", decimali=0)
     aggiungi_legenda_figura(figura, asse, colonne=2)
     aggiungi_footer_grafici_europei(figura, f"Eurostat ({dataset_code})")
 
-    percorso = cartella_grafici_europei(cartella_output) / nome_file
+    percorso = cartella_grafici_europei(cartella_output, profilo) / nome_file
     salva_grafico_europeo(figura, percorso)
     return percorso
 
 
-def grafico_tenure_status(cartella_output):
+def grafico_tenure_status(cartella_output, paese_focus="ITA"):
+    profilo = profilo_paese(paese_focus)
     dati = scarica_eurostat_dettagliato(
         "ilc_lvho02",
         {
@@ -461,7 +505,7 @@ def grafico_tenure_status(cartella_output):
             "hhcomp": "TOTAL",
             "tenure": ["OWN_L", "OWN_NL", "RENT_FR", "RENT_MKT"],
         },
-        ["IT", "EU27_2020"],
+        [profilo["iso2"], "EU27_2020"],
     )
     if dati.empty:
         return None
@@ -469,7 +513,7 @@ def grafico_tenure_status(cartella_output):
     anno = "2024" if "2024" in set(dati["time_period"]) else dati["time_period"].max()
     dati = dati.loc[dati["time_period"] == anno].copy()
     ordine = ["OWN_L", "OWN_NL", "RENT_FR", "RENT_MKT"]
-    etichette = ["IT", "EU27"]
+    etichette = [profilo["iso2"], "EU27"]
     colori = ["#ED7D31", "#1F6B86", "#92D050", "#00B050"]
     legenda = [
         "Proprieta' con mutuo",
@@ -483,7 +527,7 @@ def grafico_tenure_status(cartella_output):
     fondo = np.zeros(len(etichette))
     for posizione, tenure in enumerate(ordine):
         valori = []
-        for paese in ["ITA", "EU27_2020"]:
+        for paese in [profilo["iso3"], "EU27_2020"]:
             valore = ultima_serie(dati, paese, "tenure", tenure, anno_preferito=anno)
             valori.append(0 if valore is None else valore)
 
@@ -510,12 +554,16 @@ def grafico_tenure_status(cartella_output):
     aggiungi_legenda_figura(figura, asse, colonne=2)
     aggiungi_footer_grafici_europei(figura, "Eurostat (ilc_lvho02)")
 
-    percorso = cartella_grafici_europei(cartella_output) / "italia_ue_titolo_godimento_abitazione.png"
+    percorso = (
+        cartella_grafici_europei(cartella_output, profilo)
+        / f"{profilo['nome_file']}_ue_titolo_godimento_abitazione.png"
+    )
     salva_grafico_europeo(figura, percorso)
     return percorso
 
 
-def grafico_homeownership_income(cartella_output):
+def grafico_homeownership_income(cartella_output, paese_focus="ITA"):
+    profilo = profilo_paese(paese_focus)
     dati = scarica_eurostat_dettagliato(
         "ilc_lvho02",
         {
@@ -525,7 +573,7 @@ def grafico_homeownership_income(cartella_output):
             "tenure": "OWN",
             "incgrp": ["TOTAL", "B_MD60", "A_MD60"],
         },
-        ["IT", "EU27_2020"],
+        [profilo["iso2"], "EU27_2020"],
     )
     if dati.empty:
         return None
@@ -533,8 +581,8 @@ def grafico_homeownership_income(cartella_output):
     anno = "2024" if "2024" in set(dati["time_period"]) else dati["time_period"].max()
     dati = dati.loc[dati["time_period"] == anno].copy()
     ascisse = np.arange(2)
-    paesi = ["ITA", "EU27_2020"]
-    etichette = ["IT", "EU27"]
+    paesi = [profilo["iso3"], "EU27_2020"]
+    etichette = [profilo["iso2"], "EU27"]
     totale = [ultima_serie(dati, paese, "incgrp", "TOTAL", anno_preferito=anno) for paese in paesi]
     sotto_soglia = [ultima_serie(dati, paese, "incgrp", "B_MD60", anno_preferito=anno) for paese in paesi]
     sopra_soglia = [ultima_serie(dati, paese, "incgrp", "A_MD60", anno_preferito=anno) for paese in paesi]
@@ -551,7 +599,10 @@ def grafico_homeownership_income(cartella_output):
     aggiungi_legenda_figura(figura, asse, colonne=3)
     aggiungi_footer_grafici_europei(figura, "Eurostat (ilc_lvho02)")
 
-    percorso = cartella_grafici_europei(cartella_output) / "italia_ue_proprietari_casa_reddito.png"
+    percorso = (
+        cartella_grafici_europei(cartella_output, profilo)
+        / f"{profilo['nome_file']}_ue_proprietari_casa_reddito.png"
+    )
     salva_grafico_europeo(figura, percorso)
     return percorso
 
@@ -593,38 +644,41 @@ def combina_overburden_inquilini():
     return aggregato[["country_code", "time_period", "value", "source_dataset"]]
 
 
-def grafico_overburden_inquilini(cartella_output):
+def grafico_overburden_inquilini(cartella_output, paese_focus="ITA"):
+    profilo = profilo_paese(paese_focus)
     dati = combina_overburden_inquilini()
     if dati.empty:
         return None
 
-    banda, italia, eu27, serie_summary = prepara_banda(dati)
-    if italia.empty or eu27.empty:
+    banda, focus, eu27, serie_summary = prepara_banda(dati, paese_focus=paese_focus)
+    if focus.empty or eu27.empty:
         return None
 
-    nome_file = "italia_ue_sovraccarico_costi_inquilini.png"
+    nome_file = f"{profilo['nome_file']}_ue_sovraccarico_costi_inquilini.png"
     risultato_summary = salva_min_max_summary(
         serie_summary,
         cartella_output,
-        "eurostat",
+        profilo["slug"],
         "confronti",
         nome_file,
         paesi_esclusi={"EU27_2020", "EU", "EA20", "EA19"},
         min_paesi=8,
+        paese_focus=profilo["iso3"],
+        colonna_focus=f"{profilo['slug']}_value",
     )
     summary_min_max = risultato_summary[1]
 
     figura, asse = plt.subplots(figsize=(9.2, 5.5))
-    disegna_banda_linee(asse, banda, italia, eu27, percentuale=True)
+    disegna_banda_linee(asse, banda, focus, eu27, paese_focus=paese_focus, percentuale=True)
     aggiungi_titolo(asse, "Sovraccarico dei costi abitativi per gli inquilini")
-    serie_asse = pd.concat([italia, eu27], ignore_index=True)
+    serie_asse = pd.concat([focus, eu27], ignore_index=True)
     formatta_anni_brevi(asse, serie_asse)
     asse.set_ylim(0, max(80, banda["max"].max() * 1.05 if not banda.empty else 80))
     aggiungi_nota_min_max(asse, testo_min_max_ultimo_periodo(summary_min_max))
     aggiungi_legenda_figura(figura, asse, colonne=2)
     aggiungi_footer_grafici_europei(figura, "Eurostat ad hoc extraction (based on ilc_lvho07c and ilc_lvho02)")
 
-    percorso = cartella_grafici_europei(cartella_output) / nome_file
+    percorso = cartella_grafici_europei(cartella_output, profilo) / nome_file
     salva_grafico_europeo(figura, percorso)
     return percorso
 
@@ -642,21 +696,23 @@ def aggiungi_etichette_barre(asse, barre):
         )
 
 
-def grafico_accesso_adeguato_arop(cartella_output):
+def grafico_accesso_adeguato_arop(cartella_output, paese_focus="ITA"):
+    profilo = profilo_paese(paese_focus)
+    paesi = [profilo["iso2"], "EU27_2020"]
     sovraffollamento = scarica_eurostat_dettagliato(
         "ilc_lvho05a",
         {"freq": "A", "unit": "PC", "incgrp": ["B_MD60", "A_MD60"], "age": "TOTAL", "sex": "T"},
-        ["IT", "EU27_2020"],
+        paesi,
     )
     riscaldamento = scarica_eurostat_dettagliato(
         "ilc_mdes01",
         {"freq": "A", "unit": "PC", "hhtyp": "TOTAL", "incgrp": ["B_MD60", "A_MD60"]},
-        ["IT", "EU27_2020"],
+        paesi,
     )
     deprivazione = scarica_eurostat_dettagliato(
         "ilc_mdho06a",
         {"freq": "A", "unit": "PC", "rskpovth": ["B_60", "A_60"], "age": "TOTAL", "sex": "T"},
-        ["IT", "EU27_2020"],
+        paesi,
     )
     if sovraffollamento.empty or riscaldamento.empty or deprivazione.empty:
         return None
@@ -668,14 +724,15 @@ def grafico_accesso_adeguato_arop(cartella_output):
     ]
     serie_legenda = [
         ("A rischio poverta' EU27", "EU27_2020", True, COLORE_EU27),
-        ("A rischio poverta' Italia", "ITA", True, COLORE_ITALIA),
+        (f"A rischio poverta' {profilo['label']}", profilo["iso3"], True, profilo["colore"]),
         ("Non a rischio poverta' EU27", "EU27_2020", False, COLORE_ACCENTO),
-        ("Non a rischio poverta' Italia", "ITA", False, COLORE_VERDE),
+        (f"Non a rischio poverta' {profilo['label']}", profilo["iso3"], False, COLORE_VERDE),
     ]
 
     figura, asse = plt.subplots(figsize=(9.8, 5.5))
     ascisse = np.arange(len(categorie))
     larghezza = 0.18
+    max_valore = 0
     for posizione, (label, paese, usa_arop, colore) in enumerate(serie_legenda):
         valori = []
         for nome_categoria, frame, colonna, codice_arop, codice_non_arop, anno in categorie:
@@ -683,42 +740,49 @@ def grafico_accesso_adeguato_arop(cartella_output):
             valore = ultima_serie(frame, paese, colonna, codice, anno_preferito=anno)
             valori.append(0 if valore is None else valore)
 
+        if valori:
+            max_valore = max(max_valore, max(valori))
         offset = (posizione - 1.5) * larghezza
         barre = asse.bar(ascisse + offset, valori, width=larghezza, color=colore, label=label)
         aggiungi_etichette_barre(asse, barre)
 
     aggiungi_titolo(
         asse,
-        "Accesso a un'abitazione adeguata per rischio poverta', ultimo anno disponibile",
+        "Accesso a un'abitazione adeguata\nper rischio poverta', ultimo anno disponibile",
     )
     applica_stile_grafici_europei(asse, percentuale=True)
     asse.set_xticks(ascisse)
     asse.set_xticklabels([f"{categoria[0]}\n{categoria[5]}" for categoria in categorie])
-    asse.set_ylim(0, 45)
+    asse.set_ylim(0, max(45, max_valore * 1.18))
     aggiungi_legenda_figura(figura, asse, colonne=2)
     aggiungi_footer_grafici_europei(figura, "Eurostat (ilc_lvho05a, ilc_mdes01, ilc_mdho06a)")
 
-    percorso = cartella_grafici_europei(cartella_output) / "italia_ue_accesso_abitazione_adeguata_poverta.png"
+    percorso = (
+        cartella_grafici_europei(cartella_output, profilo)
+        / f"{profilo['nome_file']}_ue_accesso_abitazione_adeguata_poverta.png"
+    )
     salva_grafico_europeo(figura, percorso)
     return percorso
 
 
-def grafico_arop_prima_dopo_costi(cartella_output):
+def grafico_arop_prima_dopo_costi(cartella_output, paese_focus="ITA"):
+    profilo = profilo_paese(paese_focus)
+    paesi_eurostat = [profilo["iso2"], "EU27_2020"]
     arop = scarica_eurostat_dettagliato(
         "tespm010",
         {"freq": "A", "unit": "PC", "indic_il": "LI_R_MD60", "sex": "T", "age": "TOTAL"},
-        ["IT", "EU27_2020"],
+        paesi_eurostat,
     )
     dopo_costi = scarica_eurostat_dettagliato(
         "ilc_li45",
         {"freq": "A", "sex": "T", "age": "TOTAL", "unit": "PC"},
-        ["IT", "EU27_2020"],
+        paesi_eurostat,
     )
     if arop.empty or dopo_costi.empty:
         return None
 
     anno = "2024"
-    paesi = ["ITA", "EU27_2020"]
+    paesi = [profilo["iso3"], "EU27_2020"]
     valori_arop = [ultima_serie(arop, paese, anno_preferito=anno) for paese in paesi]
     valori_dopo = [ultima_serie(dopo_costi, paese, anno_preferito=anno) for paese in paesi]
     valori_arop = [0 if valore is None else valore for valore in valori_arop]
@@ -732,7 +796,7 @@ def grafico_arop_prima_dopo_costi(cartella_output):
         ascisse + larghezza / 2,
         valori_dopo,
         width=larghezza,
-        color=COLORE_ITALIA,
+        color=profilo["colore"],
         label="Dopo costi abitativi",
     )
     aggiungi_etichette_barre(asse, barre_arop)
@@ -743,17 +807,20 @@ def grafico_arop_prima_dopo_costi(cartella_output):
     )
     applica_stile_grafici_europei(asse, percentuale=True)
     asse.set_xticks(ascisse)
-    asse.set_xticklabels(["IT", "EU27"], fontweight="bold")
-    asse.set_ylim(0, 35)
+    asse.set_xticklabels([profilo["iso2"], "EU27"], fontweight="bold")
+    asse.set_ylim(0, max(35, max(valori_arop + valori_dopo) * 1.18))
     aggiungi_legenda_figura(figura, asse, colonne=2)
     aggiungi_footer_grafici_europei(figura, "Eurostat (ilc_li45, tespm010)")
 
-    percorso = cartella_grafici_europei(cartella_output) / "italia_ue_rischio_poverta_costi_abitativi.png"
+    percorso = (
+        cartella_grafici_europei(cartella_output, profilo)
+        / f"{profilo['nome_file']}_ue_rischio_poverta_costi_abitativi.png"
+    )
     salva_grafico_europeo(figura, percorso)
     return percorso
 
 
-def crea_grafici_europei(cartella_output="outputs/charts", mostra_progresso=False):
+def crea_grafici_europei(cartella_output="outputs/charts", mostra_progresso=False, paesi_confronto=None):
     grafici = [
         {"nome": "prezzi, affitti, redditi e inflazione", "tipo": "funzione", "funzione": grafico_prezzi_affitti_redditi_inflazione},
         {
@@ -816,41 +883,51 @@ def crea_grafici_europei(cartella_output="outputs/charts", mostra_progresso=Fals
     ]
 
     percorsi = []
-    totale = len(grafici)
-    for posizione, grafico in enumerate(grafici, start=1):
-        if mostra_progresso:
-            print(f"[Confronti Italia-UE {posizione}/{totale}] Creo {grafico['nome']}", flush=True)
+    paesi = normalizza_codici_paesi(paesi_confronto)
+    totale = len(grafici) * len(paesi)
+    posizione = 0
+    for paese_focus in paesi:
+        profilo = profilo_paese(paese_focus)
+        for grafico in grafici:
+            posizione += 1
+            if mostra_progresso:
+                print(
+                    f"[Confronti {profilo['label']}-UE {posizione}/{totale}] Creo {grafico['nome']}",
+                    flush=True,
+                )
 
-        if grafico["tipo"] == "funzione":
-            percorso = grafico["funzione"](cartella_output)
-        elif grafico["tipo"] == "banda":
-            percorso = grafico_banda_europeo(
-                grafico["dataset_code"],
-                grafico["filtri"],
-                grafico["titolo"],
-                grafico["nome_file"],
-                cartella_output,
-                inizio=grafico.get("inizio"),
-                fine=grafico.get("fine"),
-                percentuale=grafico["percentuale"],
-            )
-        elif grafico["tipo"] == "linee":
-            percorso = grafico_linee_europeo(
-                grafico["dataset_code"],
-                grafico["filtri"],
-                grafico["titolo"],
-                grafico["nome_file"],
-                cartella_output,
-                inizio=grafico.get("inizio"),
-                fine=grafico.get("fine"),
-                percentuale=grafico["percentuale"],
-            )
-        else:
-            percorso = None
+            if grafico["tipo"] == "funzione":
+                percorso = grafico["funzione"](cartella_output, paese_focus=paese_focus)
+            elif grafico["tipo"] == "banda":
+                percorso = grafico_banda_europeo(
+                    grafico["dataset_code"],
+                    grafico["filtri"],
+                    grafico["titolo"],
+                    grafico["nome_file"],
+                    cartella_output,
+                    inizio=grafico.get("inizio"),
+                    fine=grafico.get("fine"),
+                    percentuale=grafico["percentuale"],
+                    paese_focus=paese_focus,
+                )
+            elif grafico["tipo"] == "linee":
+                percorso = grafico_linee_europeo(
+                    grafico["dataset_code"],
+                    grafico["filtri"],
+                    grafico["titolo"],
+                    grafico["nome_file"],
+                    cartella_output,
+                    inizio=grafico.get("inizio"),
+                    fine=grafico.get("fine"),
+                    percentuale=grafico["percentuale"],
+                    paese_focus=paese_focus,
+                )
+            else:
+                percorso = None
 
-        if percorso:
-            percorsi.append(percorso)
+            if percorso:
+                percorsi.append(percorso)
 
     if mostra_progresso:
-        print(f"Confronti Italia-UE completati: {len(percorsi)} grafici creati.", flush=True)
+        print(f"Confronti paese-UE completati: {len(percorsi)} grafici creati.", flush=True)
     return percorsi

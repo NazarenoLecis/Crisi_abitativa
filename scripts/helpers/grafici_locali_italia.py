@@ -15,6 +15,7 @@ from matplotlib.ticker import FuncFormatter, ScalarFormatter
 import pandas as pd
 import requests
 from scripts.helpers.grafici import COLORE_PRINCIPALE, COLORE_EU27
+from scripts.helpers.paesi import radice_output
 from scripts.helpers.utils import WATERMARK, cartella_summary
 
 
@@ -589,19 +590,23 @@ def costruisci_focus_locale(mostra_progresso=False, ambito="capoluoghi-provincia
     return aggiungi_indicatori_affordability(focus)
 
 
-def cartella_grafici_locali(cartella_output, sezione=None):
-    cartella = Path(cartella_output) / "italia_locale"
+def percorso_grafici_locali(cartella_output, sezione=None):
+    cartella = radice_output(cartella_output) / "italia" / "charts" / "locale"
     if sezione:
         cartella = cartella / sezione
+    return cartella
 
+
+def cartella_grafici_locali(cartella_output, sezione=None):
+    cartella = percorso_grafici_locali(cartella_output, sezione)
     cartella.mkdir(parents=True, exist_ok=True)
     return cartella
 
 
 def rimuovi_grafici_province(cartella_output):
-    cartella = Path(cartella_output) / "italia_locale" / "province"
+    cartella = percorso_grafici_locali(cartella_output, "province")
     if not cartella.exists():
-        cartella_mappe = Path(cartella_output) / "italia_locale" / "mappe_regioni"
+        cartella_mappe = percorso_grafici_locali(cartella_output, "mappe_regioni")
         mappa_superata = cartella_mappe / "mappa_regioni_da_province_anni_reddito_per_80mq.png"
         if mappa_superata.exists():
             mappa_superata.unlink()
@@ -610,7 +615,7 @@ def rimuovi_grafici_province(cartella_output):
     for percorso in cartella.glob("*.png"):
         percorso.unlink()
 
-    cartella_mappe = Path(cartella_output) / "italia_locale" / "mappe_regioni"
+    cartella_mappe = percorso_grafici_locali(cartella_output, "mappe_regioni")
     mappa_superata = cartella_mappe / "mappa_regioni_da_province_anni_reddito_per_80mq.png"
     if mappa_superata.exists():
         mappa_superata.unlink()
