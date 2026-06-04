@@ -1,4 +1,3 @@
-import argparse
 from pathlib import Path
 import sys
 
@@ -10,30 +9,34 @@ if str(RADICE_PROGETTO) not in sys.path:
 from scripts.helpers.grafici_locali_italia import crea_grafici_locali_italia
 
 
-parser = argparse.ArgumentParser(description="Genera il focus locale italiano usando OMI, ISTAT e redditi MEF.")
-parser.add_argument("--output", default="outputs", help="Cartella dove salvare PNG e CSV per paese.")
-parser.add_argument(
-    "--versione",
-    default="tutte",
-    choices=["tutte", "capoluoghi-regione", "regioni", "province"],
-    help="Versione del focus locale da generare.",
-)
-parser.add_argument(
-    "--lavoratori-omi",
-    type=int,
-    default=4,
-    help="Numero massimo di richieste OMI parallele per comune.",
-)
-args = parser.parse_args()
+OUTPUT = "outputs"
+VERSIONE = "tutte"
+LAVORATORI_OMI = 4
 
-print("Creo il focus locale italiano.", flush=True)
-percorsi = crea_grafici_locali_italia(
-    args.output,
-    mostra_progresso=True,
-    versione=args.versione,
-    lavoratori_omi=args.lavoratori_omi,
-)
 
-print("Grafici focus locale creati:")
-for percorso in percorsi:
-    print(f"- {percorso}")
+def run(output=OUTPUT, versione=VERSIONE, lavoratori_omi=LAVORATORI_OMI):
+    """
+    Genera il focus locale italiano usando OMI, ISTAT e redditi MEF.
+
+    Valori accettati per `versione`:
+    - "tutte";
+    - "capoluoghi-regione";
+    - "regioni";
+    - "province".
+    """
+    print("Creo il focus locale italiano.", flush=True)
+    percorsi = crea_grafici_locali_italia(
+        output,
+        mostra_progresso=True,
+        versione=versione,
+        lavoratori_omi=lavoratori_omi,
+    )
+
+    print("Grafici focus locale creati:")
+    for percorso in percorsi:
+        print(f"- {percorso}")
+    return percorsi
+
+
+if __name__ == "__main__":
+    run(output=OUTPUT, versione=VERSIONE, lavoratori_omi=LAVORATORI_OMI)

@@ -1,4 +1,3 @@
-import argparse
 from pathlib import Path
 import sys
 
@@ -10,18 +9,25 @@ if str(RADICE_PROGETTO) not in sys.path:
 from scripts.helpers.mappe_focus_europa import crea_mappe_e_focus_europa
 
 
-parser = argparse.ArgumentParser(description="Genera mappe e focus locali per Francia e Germania.")
-parser.add_argument("--output", default="outputs", help="Cartella dove salvare PNG e CSV per paese.")
-parser.add_argument(
-    "--paesi",
-    nargs="+",
-    default=["FRA", "DEU"],
-    choices=["FRA", "DEU"],
-    help="Paesi da generare. Default: FRA DEU.",
-)
-args = parser.parse_args()
+OUTPUT = "outputs"
+PAESI = ["FRA", "DEU"]
 
-percorsi = crea_mappe_e_focus_europa(args.output, paesi=args.paesi, mostra_progresso=True)
-print("Grafici creati:")
-for percorso in percorsi:
-    print(f"- {percorso}")
+
+def run(output=OUTPUT, paesi=PAESI):
+    """
+    Genera mappe e focus locali per Francia e Germania.
+
+    Valori accettati per `paesi`:
+    - "FRA";
+    - "DEU";
+    - ["FRA", "DEU"].
+    """
+    percorsi = crea_mappe_e_focus_europa(output, paesi=paesi, mostra_progresso=True)
+    print("Grafici creati:")
+    for percorso in percorsi:
+        print(f"- {percorso}")
+    return percorsi
+
+
+if __name__ == "__main__":
+    run(output=OUTPUT, paesi=PAESI)

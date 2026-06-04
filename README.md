@@ -13,96 +13,110 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Script principali
+## Come si esegue
 
-Estrarre le serie disponibili per tutti i paesi OCSE:
+Per utenti non esperti il modo piu' semplice e' usare VS Code:
 
-```bash
-python3 -m scripts.run.estrai_ocse
+1. apri uno script dentro `scripts/run/`;
+2. modifica la chiamata finale `run(...)` in fondo al file, oppure le variabili in alto;
+3. premi **Run Python File**.
+
+Ogni script `run` ha una funzione con argomenti chiari. Per esempio, il file principale
+`scripts/run/genera_grafici.py` finisce cosi':
+
+```python
+run(
+    paesi=PAESI,
+    output=OUTPUT,
+    includi_borsino=INCLUDI_BORSINO,
+    includi_affitti_brevi=INCLUDI_AFFITTI_BREVI,
+    salta_mappe_focus_estero=SALTA_MAPPE_FOCUS_ESTERO,
+)
 ```
 
-Confrontare paesi OCSE scelti:
-
-```bash
-python3 -m scripts.run.analisi_paesi --paesi ITA DEU FRA ESP
-```
-
-Approfondire l'Italia:
-
-```bash
-python3 -m scripts.run.analisi_italia
-```
-
-Generare grafici:
+Puoi anche lanciare gli script da terminale, senza argomenti:
 
 ```bash
 python3 -m scripts.run.genera_grafici
-python3 -m scripts.run.genera_grafici --paesi-confronto ITA FRA DEU
-python3 -m scripts.run.genera_grafici --paesi-confronto tutti
-python3 -m scripts.run.genera_grafici --paesi-confronto eurostat
-python3 -m scripts.run.genera_grafici --paesi-confronto oecd
-python3 -m scripts.run.genera_grafici --lista-paesi
-python3 -m scripts.run.genera_grafici --salta-mappe-focus-estero
-python3 -m scripts.run.genera_grafici --includi-borsino
 ```
 
-Se si lancia lo script da VS Code senza argomenti, la variabile modificabile e'
-`PAESI_RUN` in `scripts/run/genera_grafici.py`. Accetta codici ISO3 oppure le scorciatoie:
+## Quale Script Usare
 
-- `tutti`: unione dei paesi disponibili per Eurostat e/o OECD;
-- `eurostat`: paesi EU27 disponibili nelle serie Eurostat usate;
-- `oecd`: paesi disponibili nel dataset OECD `DF_HOUSE_PRICES` usato per i confronti.
+| Cosa vuoi ottenere | Script da aprire | Cosa genera |
+| --- | --- | --- |
+| Tutto il progetto, scelta consigliata | `scripts/run/genera_grafici.py` | Confronti Eurostat/OECD, focus Italia, mappe/focus Francia e Germania quando richiesti |
+| Solo focus locale Italia OMI/MEF | `scripts/run/focus_locale_italia.py` | Grafici per capoluoghi, regioni, province |
+| Solo mappe comunali Italia | `scripts/run/mappe_comunali_italia.py` | Mappe regionali a livello comunale |
+| Solo mappe e focus Francia/Germania | `scripts/run/mappe_focus_europa.py` | Mappe locali e focus Parigi/Berlino |
+| Solo affitti brevi Italia | `scripts/run/affitti_brevi_italia.py` | CSV, classifiche e mappe dal registro CIN |
+| Solo Borsino | `scripts/run/focus_borsino_italia.py` | Focus opzionale con API Borsino |
+| Vedere dati OECD disponibili | `scripts/run/estrai_ocse.py` | Tabelle a terminale, non grafici |
+| Confrontare valori OECD a terminale | `scripts/run/analisi_paesi.py` | Tabelle a terminale, non grafici |
+| Snapshot Italia a terminale | `scripts/run/analisi_italia.py` | Riepilogo testuale, non grafici |
 
-La lista completa dei valori accettati si stampa con:
+## Runner Principale
 
-```bash
-python3 -m scripts.run.genera_grafici --lista-paesi
+Il file da usare piu' spesso e' `scripts/run/genera_grafici.py`.
+
+Argomento principale:
+
+```python
+paesi="ITA"
+paesi=["ITA", "FRA", "DEU"]
+paesi="tutti"
+paesi="eurostat"
+paesi="oecd"
 ```
 
-Generare solo il focus locale sui capoluoghi italiani:
+Valori utili:
 
-```bash
-python3 -m scripts.run.focus_locale_italia
+- `paesi="tutti"`: tutti i paesi disponibili in almeno una fonte;
+- `paesi="eurostat"`: solo paesi Eurostat;
+- `paesi="oecd"`: solo paesi OECD;
+- `paesi=["ITA", "FRA", "DEU"]`: solo i paesi indicati.
+
+Gli argomenti Borsino **non sono obbligatori**. Nel runner principale puoi non
+scrivere proprio `versione_borsino`, `tipo_immobile_borsino`, `api_key_borsino`
+e `pausa_borsino`: hanno gia' valori di default e vengono ignorati se
+`includi_borsino=False`. Vengono usati solo se imposti:
+
+```python
+includi_borsino=True
 ```
 
-Generare mappe regionali a livello di singolo comune:
+In quel caso serve una chiave API Borsino, passata con `api_key_borsino="..."`
+oppure con la variabile ambiente `BORSINO_API_KEY`.
 
-```bash
-python3 -m scripts.run.mappe_comunali_italia
-python3 -m scripts.run.mappe_comunali_italia --regione Sardegna
-python3 -m scripts.run.mappe_comunali_italia --regione tutte
+Esempi di chiamata finale:
+
+```python
+run(paesi=["ITA", "FRA", "DEU"])
+run(paesi="tutti", salta_mappe_focus_estero=True)
+run(paesi="ITA", includi_affitti_brevi=True, regione_affitti_brevi="Sardegna")
+run(paesi="ITA", includi_borsino=True, api_key_borsino="...")
 ```
 
-Generare solo mappe e focus per Francia e Germania:
+## Valori Accettati
 
-```bash
-python3 -m scripts.run.mappe_focus_europa
-python3 -m scripts.run.mappe_focus_europa --paesi FRA
-python3 -m scripts.run.mappe_focus_europa --paesi DEU
+Per vedere tutti i codici paese accettati, apri `scripts/run/genera_grafici.py` e usa:
+
+```python
+run(mostra_lista_paesi=True)
 ```
 
-Generare una sola versione del focus locale:
+Versioni accettate per focus locale e Borsino:
 
-```bash
-python3 -m scripts.run.focus_locale_italia --versione capoluoghi-regione
-python3 -m scripts.run.focus_locale_italia --versione regioni
-python3 -m scripts.run.focus_locale_italia --versione province
-```
+- `"tutte"`;
+- `"capoluoghi-regione"`;
+- `"regioni"`;
+- `"province"`.
 
-Generare il focus locale aggiuntivo con Borsino Immobiliare/BorsinoPro:
+Profili accettati per affitti brevi:
 
-```bash
-export BORSINO_API_KEY="..."
-python3 -m scripts.run.focus_borsino_italia
-python3 -m scripts.run.focus_borsino_italia --versione province
-```
-
-Generare la sezione aggiuntiva sugli affitti brevi dal registro CIN:
-
-```bash
-python3 -m scripts.run.affitti_brevi_italia --regione Emilia-Romagna
-python3 -m scripts.run.affitti_brevi_italia --regione tutte
-```
+- `"residenziale"`;
+- `"privati"`;
+- `"c2"`;
+- `"totale"`.
 
 Consultare il glossario metodologico degli indicatori:
 
@@ -187,7 +201,8 @@ indicatori.
 
 Il progetto include anche mappe regionali a livello di singolo comune. Il comando genera di
 default tutte le regioni, scaricando OMI per ogni comune e unendo i redditi MEF. Per fare test
-rapidi si puo' usare `--regione Sardegna` o un'altra regione specifica. Per evitare mismatch
+rapidi imposta `regione="Sardegna"` nella funzione `run(...)` o nella variabile `REGIONE`.
+Per evitare mismatch
 dovuti ai riassetti provinciali, l'aggancio con i confini comunali openpolis usa il codice
 catastale del comune.
 
@@ -211,8 +226,12 @@ quotazioni comunali consolidate di vendita e affitto. Il default usa il tipo imm
 Borsino `20`, cioe' abitazioni in stabili civili: in questo modo la sezione non mescola
 box auto, autorimesse, negozi o altre destinazioni non residenziali.
 
+Nel runner principale questa sezione non parte da sola: bisogna attivarla con
+`includi_borsino=True`. Tutti gli altri argomenti Borsino sono opzionali e possono
+restare sui default, tranne la chiave API quando decidi di generare davvero questa sezione.
+
 Per limitare chiamate API non necessarie, il comando Borsino genera di default i soli
-capoluoghi di regione. Con `--versione province` scarica i capoluoghi di provincia,
+capoluoghi di regione. Con `versione="province"` scarica i capoluoghi di provincia,
 citta' metropolitane e liberi consorzi, salva il CSV e produce mappe regionali e
 provinciali per gli stessi indicatori locali: prezzi, canoni, anni di reddito per
 80 mq ed esempi di affitto per 40 e 60 mq.

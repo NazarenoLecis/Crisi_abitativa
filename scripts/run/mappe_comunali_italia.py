@@ -1,4 +1,3 @@
-import argparse
 from pathlib import Path
 import sys
 
@@ -9,54 +8,50 @@ if str(RADICE_PROGETTO) not in sys.path:
 from scripts.helpers.mappe_comunali_italia import crea_mappe_comunali_tutte_regioni
 
 
-parser = argparse.ArgumentParser(
-    description="Genera mappe regionali a livello comunale usando OMI, ISTAT e redditi MEF."
-)
-parser.add_argument("--output", default="outputs", help="Cartella dove salvare PNG e CSV per paese.")
-parser.add_argument(
-    "--regione",
-    default="tutte",
-    help="Nome o codice ISTAT della regione da mappare. Usa 'tutte' per l'intera Italia. Default: tutte.",
-)
-parser.add_argument(
-    "--tutte-regioni",
-    action="store_true",
-    help="Alias di --regione tutte. Operazione lunga.",
-)
-parser.add_argument(
-    "--lavoratori-omi",
-    type=int,
-    default=4,
-    help="Numero massimo di richieste OMI parallele per comune.",
-)
-parser.add_argument(
-    "--limite-comuni",
-    type=int,
-    default=None,
-    help="Limita il numero di comuni scaricati. Utile solo per test tecnici.",
-)
-parser.add_argument(
-    "--pausa",
-    type=float,
-    default=0.0,
-    help="Pausa in secondi tra i comuni, utile se l'API OMI risponde lentamente.",
-)
-args = parser.parse_args()
+OUTPUT = "outputs"
+REGIONE = "tutte"
+LAVORATORI_OMI = 4
+LIMITE_COMUNI = None
+PAUSA = 0.0
 
-if args.tutte_regioni:
-    args.regione = "tutte"
 
-print(f"Creo mappe comunali per: {args.regione}.", flush=True)
-print("Scarico OMI comune per comune: questa fase puo' richiedere tempo.", flush=True)
-percorsi = crea_mappe_comunali_tutte_regioni(
-    cartella_output=args.output,
-    regione=args.regione,
-    mostra_progresso=True,
-    lavoratori_omi=args.lavoratori_omi,
-    limite_comuni=args.limite_comuni,
-    pausa=args.pausa,
-)
+def run(
+    output=OUTPUT,
+    regione=REGIONE,
+    lavoratori_omi=LAVORATORI_OMI,
+    limite_comuni=LIMITE_COMUNI,
+    pausa=PAUSA,
+):
+    """
+    Genera mappe regionali a livello comunale usando OMI, ISTAT e redditi MEF.
 
-print("Mappe comunali create:")
-for percorso in percorsi:
-    print(f"- {percorso}")
+    Valori utili:
+    - regione: "tutte" oppure nome regione, es. "Sardegna", "Lombardia";
+    - limite_comuni: None per tutti i comuni, oppure un numero per test tecnici;
+    - pausa: secondi di pausa tra richieste OMI, es. 0.2 se l'API e' lenta.
+    """
+    print(f"Creo mappe comunali per: {regione}.", flush=True)
+    print("Scarico OMI comune per comune: questa fase puo' richiedere tempo.", flush=True)
+    percorsi = crea_mappe_comunali_tutte_regioni(
+        cartella_output=output,
+        regione=regione,
+        mostra_progresso=True,
+        lavoratori_omi=lavoratori_omi,
+        limite_comuni=limite_comuni,
+        pausa=pausa,
+    )
+
+    print("Mappe comunali create:")
+    for percorso in percorsi:
+        print(f"- {percorso}")
+    return percorsi
+
+
+if __name__ == "__main__":
+    run(
+        output=OUTPUT,
+        regione=REGIONE,
+        lavoratori_omi=LAVORATORI_OMI,
+        limite_comuni=LIMITE_COMUNI,
+        pausa=PAUSA,
+    )

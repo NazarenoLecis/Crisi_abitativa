@@ -9,9 +9,8 @@ if str(RADICE_PROGETTO) not in sys.path:
 from scripts.helpers.api import scarica_italia
 from scripts.helpers.utils import latest_value
 
-dati = scarica_italia()
 
-indicatori = {
+INDICATORI = {
     "Prezzi case (indice 2015=100)": "estat_hpi_total_i15_q",
     "Retribuzione netta annua (EUR)": "estat_net_earnings_aw100_eur_a",
     "Mediana costi casa su reddito (%)": "estat_housing_cost_burden_median_a",
@@ -42,34 +41,47 @@ indicatori = {
     "OCSE salario medio annuo (USD PPP)": "oecd_avg_annual_wage_usdppp_a",
 }
 
-print("Snapshot Italia")
-print("Fonti: Eurostat API e OECD SDMX API")
-for etichetta, indicatore in indicatori.items():
-    ultimo = latest_value(dati, indicatore)
-    if ultimo is None:
-        print(f"- {etichetta}: dato non disponibile")
-        continue
-    periodo, valore = ultimo
-    print(f"- {etichetta}: {valore:,.2f} ({periodo})")
 
-permessi = latest_value(dati, "estat_residential_permits_dwellings_ths_a")
-famiglie = latest_value(dati, "estat_private_households_total_a")
-stock_totale = latest_value(dati, "estat_dwellings_total_2021")
-stock_vecchio = [
-    latest_value(dati, "estat_dwellings_built_before_1919_2021"),
-    latest_value(dati, "estat_dwellings_built_1919_1945_2021"),
-    latest_value(dati, "estat_dwellings_built_1946_1960_2021"),
-    latest_value(dati, "estat_dwellings_built_1961_1980_2021"),
-]
+def run():
+    """
+    Stampa a terminale uno snapshot degli ultimi valori disponibili per l'Italia.
+    """
+    dati = scarica_italia()
 
-print()
-print("Indicatori derivati per shortage/offerta")
-if permessi and famiglie:
-    periodo = f"{permessi[0]} / famiglie {famiglie[0]}"
-    valore = permessi[1] / famiglie[1] * 1000
-    print(f"- Permessi nuove abitazioni per 1.000 famiglie: {valore:,.2f} ({periodo})")
+    print("Snapshot Italia")
+    print("Fonti: Eurostat API e OECD SDMX API")
+    for etichetta, indicatore in INDICATORI.items():
+        ultimo = latest_value(dati, indicatore)
+        if ultimo is None:
+            print(f"- {etichetta}: dato non disponibile")
+            continue
+        periodo, valore = ultimo
+        print(f"- {etichetta}: {valore:,.2f} ({periodo})")
 
-if stock_totale and all(stock_vecchio):
-    abitazioni_pre_1981 = sum(valore for periodo, valore in stock_vecchio)
-    quota = abitazioni_pre_1981 / stock_totale[1] * 100
-    print(f"- Quota abitazioni costruite prima del 1981: {quota:,.2f}% (censimento 2021)")
+    permessi = latest_value(dati, "estat_residential_permits_dwellings_ths_a")
+    famiglie = latest_value(dati, "estat_private_households_total_a")
+    stock_totale = latest_value(dati, "estat_dwellings_total_2021")
+    stock_vecchio = [
+        latest_value(dati, "estat_dwellings_built_before_1919_2021"),
+        latest_value(dati, "estat_dwellings_built_1919_1945_2021"),
+        latest_value(dati, "estat_dwellings_built_1946_1960_2021"),
+        latest_value(dati, "estat_dwellings_built_1961_1980_2021"),
+    ]
+
+    print()
+    print("Indicatori derivati per shortage/offerta")
+    if permessi and famiglie:
+        periodo = f"{permessi[0]} / famiglie {famiglie[0]}"
+        valore = permessi[1] / famiglie[1] * 1000
+        print(f"- Permessi nuove abitazioni per 1.000 famiglie: {valore:,.2f} ({periodo})")
+
+    if stock_totale and all(stock_vecchio):
+        abitazioni_pre_1981 = sum(valore for periodo, valore in stock_vecchio)
+        quota = abitazioni_pre_1981 / stock_totale[1] * 100
+        print(f"- Quota abitazioni costruite prima del 1981: {quota:,.2f}% (censimento 2021)")
+
+    return dati
+
+
+if __name__ == "__main__":
+    run()

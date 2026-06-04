@@ -138,7 +138,7 @@ SCORCIATOIE_PAESI = {
     "eurostat": PAESI_EUROSTAT,
     "oecd": PAESI_OECD,
 }
-VALORI_PAESI_RUN = sorted(PAESI_ACCETTATI + list(SCORCIATOIE_PAESI))
+VALORI_PAESI_ACCETTATI = sorted(PAESI_ACCETTATI + list(SCORCIATOIE_PAESI))
 
 
 def slug_testo(testo):
@@ -199,7 +199,7 @@ SLUG_PAESI_CONFRONTO = {profilo["slug"] for profilo in PAESI_CONFRONTO.values()}
 def profilo_paese(codice):
     codice_normale = str(codice).upper()
     if codice_normale not in PAESI_CONFRONTO:
-        valori = ", ".join(VALORI_PAESI_RUN)
+        valori = ", ".join(VALORI_PAESI_ACCETTATI)
         raise ValueError(f"Paese non configurato: {codice}. Valori ammessi: {valori}")
     return PAESI_CONFRONTO[codice_normale]
 
@@ -237,12 +237,18 @@ def aggiungi_codici_unici(codici):
     return risultato
 
 
-def risolvi_codici_paesi(codici, default=None):
-    if codici is None:
-        return list(default or PAESI_DEFAULT_CONFRONTO)
+def valori_paesi(codici, default=None):
+    valori = default if codici is None else codici
+    if valori is None:
+        return []
+    if isinstance(valori, str):
+        return [valori]
+    return list(valori)
 
+
+def risolvi_codici_paesi(codici, default=None):
     codici_risolti = []
-    for codice in codici:
+    for codice in valori_paesi(codici, default or PAESI_DEFAULT_CONFRONTO):
         valore = str(codice).strip()
         valore_minuscolo = valore.lower()
         if valore_minuscolo in SCORCIATOIE_PAESI:
@@ -253,7 +259,7 @@ def risolvi_codici_paesi(codici, default=None):
     codici_unici = aggiungi_codici_unici(codici_risolti)
     non_validi = [codice for codice in codici_unici if codice not in PAESI_CONFRONTO]
     if non_validi:
-        valori = ", ".join(VALORI_PAESI_RUN)
+        valori = ", ".join(VALORI_PAESI_ACCETTATI)
         raise ValueError(f"Paesi non validi: {', '.join(non_validi)}. Valori ammessi: {valori}")
 
     return codici_unici

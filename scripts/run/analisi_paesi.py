@@ -1,4 +1,3 @@
-import argparse
 from pathlib import Path
 import sys
 
@@ -8,20 +7,34 @@ if str(RADICE_PROGETTO) not in sys.path:
     sys.path.insert(0, str(RADICE_PROGETTO))
 
 from scripts.helpers.api import scarica_ocse
+from scripts.helpers.paesi import valori_paesi
 from scripts.helpers.utils import stampa_ultimi_valori
 
 
-parser = argparse.ArgumentParser(description="Confronta paesi OCSE scelti usando direttamente le API OECD.")
-parser.add_argument("--paesi", nargs="+", default=["ITA", "DEU", "FRA", "ESP"], help="Codici ISO3 OCSE, es. ITA DEU FRA ESP")
-parser.add_argument("--righe", type=int, default=80, help="Numero massimo di righe da mostrare.")
-args = parser.parse_args()
+PAESI = ["ITA", "DEU", "FRA", "ESP"]
+RIGHE = 80
 
-dati = scarica_ocse(args.paesi)
-ultimi = stampa_ultimi_valori(dati)
 
-print("Confronto paesi OCSE")
-print("Fonte: OECD SDMX API")
-print(f"Paesi richiesti: {', '.join(args.paesi)}")
-print(f"Righe scaricate: {len(dati):,}")
-print()
-print(ultimi.head(args.righe).to_string(index=False))
+def run(paesi=PAESI, righe=RIGHE):
+    """
+    Stampa a terminale gli ultimi valori OECD per alcuni paesi.
+
+    Valori utili per `paesi`:
+    - "ITA" per un paese singolo;
+    - ["ITA", "DEU", "FRA", "ESP"] per una lista di paesi OECD.
+    """
+    paesi_richiesti = valori_paesi(paesi)
+    dati = scarica_ocse(paesi_richiesti)
+    ultimi = stampa_ultimi_valori(dati)
+
+    print("Confronto paesi OCSE")
+    print("Fonte: OECD SDMX API")
+    print(f"Paesi richiesti: {', '.join(paesi_richiesti)}")
+    print(f"Righe scaricate: {len(dati):,}")
+    print()
+    print(ultimi.head(righe).to_string(index=False))
+    return dati
+
+
+if __name__ == "__main__":
+    run(paesi=PAESI, righe=RIGHE)

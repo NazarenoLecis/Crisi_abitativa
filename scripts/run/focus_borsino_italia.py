@@ -1,4 +1,3 @@
-import argparse
 from pathlib import Path
 import sys
 
@@ -7,60 +6,53 @@ RADICE_PROGETTO = Path(__file__).resolve().parents[2]
 if str(RADICE_PROGETTO) not in sys.path:
     sys.path.insert(0, str(RADICE_PROGETTO))
 
-from scripts.helpers.borsino import (
-    BORSINO_API_KEY_ENV,
-    BORSINO_TIPO_ABITAZIONI_CIVILI,
-    crea_grafici_borsino_italia,
-)
+from scripts.helpers.borsino import BORSINO_TIPO_ABITAZIONI_CIVILI, crea_grafici_borsino_italia
 
 
-parser = argparse.ArgumentParser(
-    description="Genera il focus locale italiano usando Borsino Immobiliare/BorsinoPro, ISTAT e redditi MEF."
-)
-parser.add_argument("--output", default="outputs", help="Cartella dove salvare PNG e CSV per paese.")
-parser.add_argument(
-    "--versione",
-    default="capoluoghi-regione",
-    choices=["tutte", "capoluoghi-regione", "regioni", "province"],
-    help="Versione del focus Borsino da generare. Province richiede molte piu' chiamate API.",
-)
-parser.add_argument(
-    "--tipo-immobile",
-    type=int,
-    default=BORSINO_TIPO_ABITAZIONI_CIVILI,
-    help="Codice tipo immobile Borsino. Default: 20, abitazioni in stabili civili.",
-)
-parser.add_argument(
-    "--api-key",
-    default=None,
-    help=f"Chiave API Borsino. In alternativa usa la variabile ambiente {BORSINO_API_KEY_ENV}.",
-)
-parser.add_argument(
-    "--pausa",
-    type=float,
-    default=0.2,
-    help="Pausa in secondi tra le citta', utile per non stressare l'API.",
-)
-args = parser.parse_args()
+OUTPUT = "outputs"
+VERSIONE = "capoluoghi-regione"
+TIPO_IMMOBILE = BORSINO_TIPO_ABITAZIONI_CIVILI
+API_KEY = None
+PAUSA = 0.2
 
-print("Creo il focus locale Borsino Italia.", flush=True)
-print(
-    "Uso Borsino come sezione aggiuntiva: non sostituisce OMI e richiede una chiave API.",
-    flush=True,
-)
-try:
-    percorsi = crea_grafici_borsino_italia(
-        args.output,
-        mostra_progresso=True,
-        versione=args.versione,
-        tipo_immobile=args.tipo_immobile,
-        api_key=args.api_key,
-        pausa=args.pausa,
-    )
-except RuntimeError as errore:
-    print(str(errore), flush=True)
-    raise SystemExit(1)
 
-print("Grafici Borsino creati:")
-for percorso in percorsi:
-    print(f"- {percorso}")
+def run(output=OUTPUT, versione=VERSIONE, tipo_immobile=TIPO_IMMOBILE, api_key=API_KEY, pausa=PAUSA):
+    """
+    Genera il focus locale italiano usando Borsino Immobiliare/BorsinoPro.
+
+    Valori accettati per `versione`:
+    - "tutte";
+    - "capoluoghi-regione";
+    - "regioni";
+    - "province".
+
+    Questo script genera solo Borsino: qui serve una chiave API Borsino.
+    Puoi passarla con `api_key` oppure impostare la variabile ambiente
+    BORSINO_API_KEY.
+
+    Nel runner principale `scripts/run/genera_grafici.py`, invece, gli
+    argomenti Borsino sono facoltativi finche' `includi_borsino=False`.
+    """
+    print("Creo il focus locale Borsino Italia.", flush=True)
+    print("Uso Borsino come sezione aggiuntiva: non sostituisce OMI e richiede una chiave API.", flush=True)
+    try:
+        percorsi = crea_grafici_borsino_italia(
+            output,
+            mostra_progresso=True,
+            versione=versione,
+            tipo_immobile=tipo_immobile,
+            api_key=api_key,
+            pausa=pausa,
+        )
+    except RuntimeError as errore:
+        print(str(errore), flush=True)
+        raise SystemExit(1)
+
+    print("Grafici Borsino creati:")
+    for percorso in percorsi:
+        print(f"- {percorso}")
+    return percorsi
+
+
+if __name__ == "__main__":
+    run(output=OUTPUT, versione=VERSIONE, tipo_immobile=TIPO_IMMOBILE, api_key=API_KEY, pausa=PAUSA)
