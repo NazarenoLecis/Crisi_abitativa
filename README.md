@@ -212,6 +212,7 @@ ipotesi preliminari.
 Output:
 
 - `outputs/italia/charts/locale/capoluoghi_regione/`
+- `outputs/italia/charts/locale/capoluoghi_regione/capoluoghi_regione_range_zone_vendita_omi.png`
 - `outputs/italia/charts/locale/regioni/`
 - `outputs/italia/charts/locale/mappe_regioni/`
 - `outputs/italia/charts/locale/mappe_province/`
@@ -272,7 +273,9 @@ Output:
 
 ## Mappe e Focus Francia/Germania
 
-Le mappe estere producono affitti, valori di vendita o proxy di vendita e rapporti al reddito.
+Le mappe estere producono affitti, valori di vendita dove disponibili e rapporti al reddito.
+Per la Germania i prezzi di acquisto non usano piu' Bauland: sono prezzi residenziali di
+offerta, quindi non rogiti ufficiali, e vanno letti come livello di mercato annunciato.
 
 Francia:
 
@@ -281,14 +284,21 @@ Francia:
 - prezzi di vendita da DVF stats whole period;
 - reddito da livello di vita mediano comunale;
 - focus dedicato a Parigi, aggregando gli arrondissement al codice comunale `75056`.
+- mappe dedicate a Parigi a livello arrondissement; per i rapporti al reddito si usa il reddito mediano aggregato di Parigi come denominatore.
+- grafico range prezzi in `outputs/francia/charts/focus/francia_range_prezzi_dvf_dipartimenti.png`.
 
 Germania:
 
 - livello Kreise e citta-distretto, non singoli comuni, perche' gli indicatori INKAR usati non sono disponibili in modo completo a livello Gemeinde;
 - affitti da INKAR Angebotsmieten 2024;
-- valori di acquisto del suolo edificabile da INKAR Bauland 2022, quindi non una quotazione residenziale pura;
+- prezzi di vendita da immobilienpreise.org come `Wohnungspreis pro mq` 2026, con aree grigie dove il dato non e' disponibile;
 - reddito disponibile medio mensile per abitante da INKAR Haushaltseinkommen 2022, annualizzato;
-- focus dedicato a Berlino (`11000`).
+- niente proxy di acquisto: i valori Bauland non vengono usati perche' non sono prezzi residenziali;
+- focus dedicato a Berlino (`11000`) su affitti e rapporto al reddito.
+- grafico range affitti in `outputs/germania/charts/focus/berlino_range_affitti_quartieri.png`, con mediana e range dei quartieri statistici dentro ciascun Bezirk.
+- mappe affitti dedicate a Berlino a livello di quartieri statistici/Prognoseraeume da Wohnatlas Berlin.
+- mappe prezzi dedicate a Berlino a livello Ortsteile da ODIS Berlin e miete-aktuell.de; alcune aree restano grigie se la pagina prezzo non e' disponibile.
+- mappe dedicate a Parigi e Berlino nel path `outputs/{paese}/charts/mappe/`, con prefissi `parigi_*` e `berlino_*`.
 
 Output:
 

@@ -2,7 +2,10 @@ from io import BytesIO
 import json
 import re
 import textwrap
+import copy
+import unicodedata
 import urllib3
+from bs4 import BeautifulSoup
 import matplotlib.pyplot as plt
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
@@ -10,7 +13,7 @@ from matplotlib.patches import Polygon
 from matplotlib.ticker import FuncFormatter, ScalarFormatter
 import pandas as pd
 import requests
-from scripts.helpers.grafici import COLORE_EU27
+from scripts.helpers.grafici import COLORE_EU27, COLORE_PRINCIPALE
 from scripts.helpers.paesi import cartella_paese, normalizza_codici_paesi, profilo_paese
 from scripts.helpers.utils import WATERMARK, cartella_summary
 
@@ -25,16 +28,33 @@ FRANCIA_REDDITI_URL = (
 )
 FRANCIA_GEOJSON_URL = "https://france-geojson.gregoiredavid.fr/repo/communes.geojson"
 GERMANIA_GEOJSON_URL = "https://raw.githubusercontent.com/m-ad/geofeatures-ags-germany/master/geojson/counties.json"
+BERLINO_AFFITTI_WFS_URL = "https://gdi.berlin.de/services/wfs/wa_01_angebotsmieten"
+BERLINO_AFFITTI_LAYER = "wa_01_angebotsmieten:wa_01_2022"
+BERLINO_ORTSTEILE_GEOJSON_URL = "https://tsb-opendata.s3.eu-central-1.amazonaws.com/ortsteile/lor_ortsteile.geojson"
+IMMOBILIENPREISE_BASE_URL = "https://www.immobilienpreise.org"
+MIETE_AKTUELL_BASE_URL = "https://www.miete-aktuell.de/immobilienpreise-quadratmeterpreise"
 INKAR_BASE_URL = "https://www.inkar.de"
 USER_AGENT = "crisi-abitativa/0.1"
+BROWSER_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/125.0 Safari/537.36"
+LETTERE_PREZZI_LANDKREISE = list("abcdefghijklmnopqrstuvwxyz") + ["ue", "ae", "oe"]
 
 FONTE_FRANCIA = (
     "data.gouv.fr: DVF stats whole period, Carte des loyers 2025, niveau de vie median; "
     "france-geojson.gregoiredavid.fr"
 )
 FONTE_GERMANIA = (
-    "BBSR INKAR: Angebotsmieten 2024, Kaufwerte Bauland 2022, Haushaltseinkommen 2022; "
+    "BBSR INKAR: Angebotsmieten 2024, Haushaltseinkommen 2022; geofeatures-ags-germany"
+)
+FONTE_GERMANIA_PREZZI = (
+    "immobilienpreise.org: Wohnungspreis pro mq 2026; BBSR INKAR Haushaltseinkommen 2022; "
     "geofeatures-ags-germany"
+)
+FONTE_BERLINO_QUARTIERI = (
+    "Wohnatlas Berlin Angebotsmieten 2022; BBSR INKAR Haushaltseinkommen 2022"
+)
+FONTE_BERLINO_PREZZI = (
+    "miete-aktuell.de: prezzi di offerta residenziali 2026 per Ortsteil; ODIS Berlin Ortsteile; "
+    "BBSR INKAR Haushaltseinkommen 2022"
 )
 
 MAPPE_FRANCIA = [
@@ -83,15 +103,15 @@ MAPPE_GERMANIA = [
     ),
     (
         "prezzo_mq",
-        "Valori di acquisto del suolo edificabile: Kreise e citta-distretto tedesche, 2022",
+        "Prezzi di vendita annunciati per appartamenti: Kreise e citta-distretto tedesche, 2026",
         "euro/mq",
-        "germania_kreise_valori_bauland_mq.png",
+        "germania_kreise_prezzi_vendita_mq.png",
         False,
         0,
     ),
     (
         "anni_reddito_per_80mq",
-        "Valore di 80 mq di suolo edificabile in anni di reddito: Kreise e citta-distretto tedesche",
+        "Prezzo stimato di 80 mq in anni di reddito disponibile: Kreise e citta-distretto tedesche",
         "anni di reddito",
         "germania_kreise_anni_reddito_per_80mq.png",
         False,
@@ -107,17 +127,210 @@ MAPPE_GERMANIA = [
     ),
 ]
 
+MAPPE_PARIGI = [
+    (
+        "affitto_mq_mese",
+        "Affitti annunciati per appartamenti: arrondissement di Parigi, 2025",
+        "euro/mq/mese",
+        "parigi_affitti_mq_mese.png",
+        False,
+        1,
+    ),
+    (
+        "prezzo_mq",
+        "Prezzi di vendita residenziali DVF: arrondissement di Parigi",
+        "euro/mq",
+        "parigi_prezzi_vendita_mq.png",
+        False,
+        0,
+    ),
+    (
+        "anni_reddito_per_80mq",
+        "Prezzo stimato di 80 mq sul reddito mediano di Parigi: arrondissement",
+        "anni di reddito",
+        "parigi_anni_reddito_per_80mq.png",
+        False,
+        1,
+    ),
+    (
+        "affitto_40mq_su_reddito_pct",
+        "Affitto stimato di 40 mq sul reddito mediano di Parigi: arrondissement",
+        "% del reddito",
+        "parigi_affitto_40mq_reddito.png",
+        True,
+        0,
+    ),
+]
+
+MAPPE_BERLINO = [
+    (
+        "affitto_mq_mese",
+        "Affitti annunciati per appartamenti: quartieri statistici di Berlino, 2022",
+        "euro/mq/mese",
+        "berlino_affitti_mq_mese.png",
+        False,
+        1,
+    ),
+    (
+        "prezzo_mq",
+        "Prezzi di vendita residenziali annunciati: Ortsteile di Berlino, 2026",
+        "euro/mq",
+        "berlino_prezzi_vendita_mq.png",
+        False,
+        0,
+    ),
+    (
+        "anni_reddito_per_80mq",
+        "Prezzo stimato di 80 mq sul reddito disponibile medio di Berlino: Ortsteile",
+        "anni di reddito",
+        "berlino_anni_reddito_per_80mq.png",
+        False,
+        1,
+    ),
+    (
+        "affitto_40mq_su_reddito_pct",
+        "Affitto stimato di 40 mq sul reddito disponibile medio di Berlino: quartieri statistici",
+        "% del reddito",
+        "berlino_affitto_40mq_reddito.png",
+        True,
+        0,
+    ),
+]
+
+FOCUS_CITTA = {
+    "FRA": {
+        "codice": "75056",
+        "nome": "Parigi",
+        "prefisso_file": "parigi_",
+        "prefisso_nome_file": "francia_comuni_",
+    },
+    "DEU": {
+        "codice": "11000",
+        "nome": "Berlino",
+        "prefisso_file": "berlino_",
+        "prefisso_nome_file": "germania_kreise_",
+    },
+}
+
 AGGREGAZIONI_COMUNI_FRANCIA = {
     "75056": {"nome": "Paris", "codici": [f"751{numero:02d}" for numero in range(1, 21)]},
     "13055": {"nome": "Marseille", "codici": [f"132{numero:02d}" for numero in range(1, 17)]},
     "69123": {"nome": "Lyon", "codici": [f"6938{numero}" for numero in range(1, 10)]},
 }
 
+NOMI_DIPARTIMENTI_FRANCESI = {
+    "01": "Ain",
+    "02": "Aisne",
+    "03": "Allier",
+    "04": "Alpes-de-Haute-Provence",
+    "05": "Hautes-Alpes",
+    "06": "Alpes-Maritimes",
+    "07": "Ardeche",
+    "08": "Ardennes",
+    "09": "Ariege",
+    "10": "Aube",
+    "11": "Aude",
+    "12": "Aveyron",
+    "13": "Bouches-du-Rhone",
+    "14": "Calvados",
+    "15": "Cantal",
+    "16": "Charente",
+    "17": "Charente-Maritime",
+    "18": "Cher",
+    "19": "Correze",
+    "2A": "Corse-du-Sud",
+    "2B": "Haute-Corse",
+    "21": "Cote-d'Or",
+    "22": "Cotes-d'Armor",
+    "23": "Creuse",
+    "24": "Dordogne",
+    "25": "Doubs",
+    "26": "Drome",
+    "27": "Eure",
+    "28": "Eure-et-Loir",
+    "29": "Finistere",
+    "30": "Gard",
+    "31": "Haute-Garonne",
+    "32": "Gers",
+    "33": "Gironde",
+    "34": "Herault",
+    "35": "Ille-et-Vilaine",
+    "36": "Indre",
+    "37": "Indre-et-Loire",
+    "38": "Isere",
+    "39": "Jura",
+    "40": "Landes",
+    "41": "Loir-et-Cher",
+    "42": "Loire",
+    "43": "Haute-Loire",
+    "44": "Loire-Atlantique",
+    "45": "Loiret",
+    "46": "Lot",
+    "47": "Lot-et-Garonne",
+    "48": "Lozere",
+    "49": "Maine-et-Loire",
+    "50": "Manche",
+    "51": "Marne",
+    "52": "Haute-Marne",
+    "53": "Mayenne",
+    "54": "Meurthe-et-Moselle",
+    "55": "Meuse",
+    "56": "Morbihan",
+    "57": "Moselle",
+    "58": "Nievre",
+    "59": "Nord",
+    "60": "Oise",
+    "61": "Orne",
+    "62": "Pas-de-Calais",
+    "63": "Puy-de-Dome",
+    "64": "Pyrenees-Atlantiques",
+    "65": "Hautes-Pyrenees",
+    "66": "Pyrenees-Orientales",
+    "67": "Bas-Rhin",
+    "68": "Haut-Rhin",
+    "69": "Rhone",
+    "70": "Haute-Saone",
+    "71": "Saone-et-Loire",
+    "72": "Sarthe",
+    "73": "Savoie",
+    "74": "Haute-Savoie",
+    "75": "Paris",
+    "76": "Seine-Maritime",
+    "77": "Seine-et-Marne",
+    "78": "Yvelines",
+    "79": "Deux-Sevres",
+    "80": "Somme",
+    "81": "Tarn",
+    "82": "Tarn-et-Garonne",
+    "83": "Var",
+    "84": "Vaucluse",
+    "85": "Vendee",
+    "86": "Vienne",
+    "87": "Haute-Vienne",
+    "88": "Vosges",
+    "89": "Yonne",
+    "90": "Territoire de Belfort",
+    "91": "Essonne",
+    "92": "Hauts-de-Seine",
+    "93": "Seine-Saint-Denis",
+    "94": "Val-de-Marne",
+    "95": "Val-d'Oise",
+}
 
-def richiesta_get(url, timeout=120):
-    risposta = requests.get(url, timeout=timeout, headers={"User-Agent": USER_AGENT})
+
+def richiesta_get(url, timeout=120, params=None):
+    risposta = requests.get(url, timeout=timeout, params=params, headers={"User-Agent": USER_AGENT})
     risposta.raise_for_status()
     return risposta
+
+
+def scarica_html(url, timeout=45):
+    try:
+        risposta = requests.get(url, timeout=timeout, headers={"User-Agent": BROWSER_USER_AGENT})
+        risposta.raise_for_status()
+    except requests.RequestException:
+        return ""
+    return risposta.text
 
 
 def leggi_csv_url(url, **opzioni):
@@ -129,6 +342,67 @@ def numero_con_virgola(valore):
     testo = str(valore).strip().replace("\xa0", "")
     testo = testo.replace(",", ".")
     return pd.to_numeric(testo, errors="coerce")
+
+
+def numero_tedesco(valore):
+    testo = str(valore).strip().replace("\xa0", " ")
+    if testo.lower() in {"", "nan"} or "k.a" in testo.lower():
+        return pd.NA
+    trovato = re.search(r"([0-9][0-9.]*,?[0-9]*)", testo)
+    if not trovato:
+        return pd.NA
+    numero = trovato.group(1).replace(".", "").replace(",", ".")
+    return pd.to_numeric(numero, errors="coerce")
+
+
+def testo_ascii_tedesco(testo):
+    testo = str(testo).strip()
+    sostituzioni = {
+        "ä": "ae",
+        "ö": "oe",
+        "ü": "ue",
+        "Ä": "Ae",
+        "Ö": "Oe",
+        "Ü": "Ue",
+        "ß": "ss",
+    }
+    for originale, sostituto in sostituzioni.items():
+        testo = testo.replace(originale, sostituto)
+    return unicodedata.normalize("NFKD", testo).encode("ascii", "ignore").decode("ascii")
+
+
+def slug_tedesco(testo):
+    testo = testo_ascii_tedesco(testo)
+    testo = testo.replace("i.d.OPf.", "in der Oberpfalz").replace("i.d. OPf.", "in der Oberpfalz")
+    testo = re.sub(r"\((.*?)\)", r" \1 ", testo)
+    testo = re.sub(r"[^A-Za-z0-9]+", "-", testo).strip("-")
+    return testo.lower()
+
+
+def slug_miete_aktuell(testo):
+    testo = testo_ascii_tedesco(testo)
+    testo = re.sub(r"\((.*?)\)", r" \1 ", testo)
+    testo = re.sub(r"[^A-Za-z0-9]+", "-", testo).strip("-")
+    return testo
+
+
+def chiave_area_tedesca(testo):
+    testo = testo_ascii_tedesco(testo).lower()
+    testo = re.sub(r"\b(stadt|landkreis|kreisfreie|kreis|lkr)\b", " ", testo)
+    testo = re.sub(r"[^a-z0-9]+", " ", testo)
+    return re.sub(r"\s+", " ", testo).strip()
+
+
+def chiavi_area_tedesca(testo):
+    base = chiave_area_tedesca(testo)
+    chiavi = {base}
+    parole_da_rimuovere = ["staedteregion", "regionalverband", "region"]
+    for parola in parole_da_rimuovere:
+        pulita = re.sub(rf"\b{parola}\b", " ", base)
+        pulita = re.sub(r"\s+", " ", pulita).strip()
+        if pulita:
+            chiavi.add(pulita)
+    return [chiave for chiave in chiavi if chiave]
 
 
 def codice_francese(valore):
@@ -315,6 +589,152 @@ def scarica_geojson_germania():
     return richiesta_get(GERMANIA_GEOJSON_URL, timeout=120).json()
 
 
+def scarica_geojson_berlino_affitti():
+    parametri = {
+        "service": "WFS",
+        "version": "2.0.0",
+        "request": "GetFeature",
+        "typenames": BERLINO_AFFITTI_LAYER,
+        "outputFormat": "application/json",
+        "srsName": "EPSG:4326",
+    }
+    return richiesta_get(BERLINO_AFFITTI_WFS_URL, timeout=180, params=parametri).json()
+
+
+def scarica_geojson_berlino_ortsteile():
+    return richiesta_get(BERLINO_ORTSTEILE_GEOJSON_URL, timeout=180).json()
+
+
+def codice_feature_berlino(feature):
+    proprieta = feature.get("properties", {})
+    return str(proprieta.get("prognoseraum_nummer", feature.get("id", ""))).strip().zfill(4)
+
+
+def codice_feature_berlino_ortsteil(feature):
+    proprieta = feature.get("properties", {})
+    return str(proprieta.get("spatial_name", feature.get("id", ""))).strip().zfill(4)
+
+
+def reddito_annuo_berlino(dati_germania):
+    if dati_germania is None or dati_germania.empty:
+        return None
+    righe = dati_germania.loc[dati_germania["codice_area"] == "11000"].copy()
+    if righe.empty:
+        return None
+    valore = pd.to_numeric(righe["reddito_annuo"], errors="coerce").dropna()
+    if valore.empty:
+        return None
+    return float(valore.iloc[0])
+
+
+def prezzo_ortsteil_berlino(nome):
+    url = f"{MIETE_AKTUELL_BASE_URL}/Berlin/Berlin/{slug_miete_aktuell(nome)}/"
+    html = scarica_html(url)
+    if not html:
+        return pd.NA
+    testo = BeautifulSoup(html, "html.parser").get_text(" ")
+    modelli = [
+        r"liegt bei\s+([0-9.]+,[0-9]+)\s*€\s+je Quadratmeter",
+        r"im Jahr 2026 etwa\s+([0-9.]+,[0-9]+)\s*€",
+    ]
+    for modello in modelli:
+        trovato = re.search(modello, testo, flags=re.S)
+        if trovato:
+            return numero_tedesco(trovato.group(1))
+    return pd.NA
+
+
+def carica_dati_berlino_vendite(dati_germania=None, mostra_progresso=False):
+    geojson = scarica_geojson_berlino_ortsteile()
+    reddito_annuo = reddito_annuo_berlino(dati_germania)
+    righe = []
+    features = []
+    elementi = geojson.get("features", [])
+    totale = len(elementi)
+    for posizione, feature in enumerate(elementi, start=1):
+        copia = copy.deepcopy(feature)
+        proprieta = copia.get("properties", {})
+        codice_area = codice_feature_berlino_ortsteil(copia)
+        nome = str(proprieta.get("OTEIL", proprieta.get("spatial_alias", codice_area))).strip()
+        if mostra_progresso and posizione % 20 == 0:
+            print(f"[Mappe DEU] Prezzi Berlino Ortsteile {posizione}/{totale}", flush=True)
+        prezzo = prezzo_ortsteil_berlino(nome)
+        copia["id"] = codice_area
+        proprieta["code"] = codice_area
+        proprieta["name"] = nome
+        copia["properties"] = proprieta
+        features.append(copia)
+        righe.append(
+            {
+                "codice_area": codice_area,
+                "comune": nome,
+                "bezirk": str(proprieta.get("BEZIRK", "")).strip(),
+                "prezzo_mq": prezzo,
+                "affitto_mq_mese": pd.NA,
+                "reddito_annuo": reddito_annuo,
+                "fonte_prezzo": "miete-aktuell.de Immobilienpreise 2026",
+                "fonte_reddito": "INKAR Haushaltseinkommen 2022, valore Berlino",
+            }
+        )
+
+    dati = pd.DataFrame(righe)
+    if not dati.empty:
+        dati = aggiungi_indicatori_reddito(dati)
+    return dati, {"type": "FeatureCollection", "features": features}
+
+
+def carica_dati_berlino_quartieri(dati_germania=None):
+    geojson = scarica_geojson_berlino_affitti()
+    reddito_annuo = reddito_annuo_berlino(dati_germania)
+    righe = []
+    features = []
+    for feature in geojson.get("features", []):
+        copia = copy.deepcopy(feature)
+        proprieta = copia.get("properties", {})
+        codice_area = codice_feature_berlino(copia)
+        nome = str(proprieta.get("prognoseraum_bezeichnung", codice_area)).strip()
+        affitto = pd.to_numeric(pd.Series([proprieta.get("angebotsmieten")]), errors="coerce").iloc[0]
+        copia["id"] = codice_area
+        proprieta["code"] = codice_area
+        proprieta["name"] = nome
+        copia["properties"] = proprieta
+        features.append(copia)
+        righe.append(
+            {
+                "codice_area": codice_area,
+                "comune": nome,
+                "bezirk": str(proprieta.get("bezirk", "")).strip(),
+                "affitto_mq_mese": affitto,
+                "reddito_annuo": reddito_annuo,
+                "fonte_affitto": "Wohnatlas Berlin Angebotsmieten 2022",
+                "fonte_reddito": "INKAR Haushaltseinkommen 2022, valore Berlino",
+            }
+        )
+
+    dati = pd.DataFrame(righe)
+    if not dati.empty:
+        dati["affitto_40mq_mese"] = dati["affitto_mq_mese"] * 40
+        dati["affitto_40mq_annuo"] = dati["affitto_40mq_mese"] * 12
+        dati["affitto_40mq_su_reddito_pct"] = dati["affitto_40mq_annuo"] / dati["reddito_annuo"] * 100
+
+    return dati, {"type": "FeatureCollection", "features": features}
+
+
+def completa_reddito_focus_francia(dati_citta, dati, codice_area):
+    righe_citta = dati.loc[dati["codice_area"] == codice_area].copy()
+    if righe_citta.empty:
+        return dati_citta
+
+    reddito = pd.to_numeric(righe_citta["reddito_annuo"], errors="coerce").dropna()
+    if reddito.empty:
+        return dati_citta
+
+    risultato = dati_citta.copy()
+    risultato["reddito_annuo"] = pd.to_numeric(risultato["reddito_annuo"], errors="coerce").fillna(float(reddito.iloc[0]))
+    risultato = aggiungi_indicatori_reddito(risultato)
+    return risultato
+
+
 def nomi_kreise_germania(geojson):
     righe = []
     for feature in geojson.get("features", []):
@@ -330,6 +750,99 @@ def nomi_kreise_germania(geojson):
     return pd.DataFrame(righe)
 
 
+def prezzo_citta_immobilienpreise(nome):
+    url = f"{IMMOBILIENPREISE_BASE_URL}/stadt/{slug_tedesco(nome)}"
+    html = scarica_html(url)
+    if not html:
+        return pd.NA
+    testo = BeautifulSoup(html, "html.parser").get_text(" ")
+    modelli = [
+        r"Derzeit liegen die Wohnungspreise in .*? bei\s+([0-9.]+,?[0-9]*)\s*€/m²",
+        r"Die Quadratmeterpreise bei Wohnungen in .*? betragen\s+([0-9.]+,?[0-9]*)\s*€",
+        r"Verkaufspreise für Wohnungen .*? bei\s+([0-9.]+,?[0-9]*)\s*€",
+    ]
+    for modello in modelli:
+        trovato = re.search(modello, testo, flags=re.S)
+        if trovato and "k.A" not in trovato.group(0):
+            return numero_tedesco(trovato.group(1))
+    return pd.NA
+
+
+def prezzo_landkreis_immobilienpreise(nome):
+    url = f"{IMMOBILIENPREISE_BASE_URL}/landkreis/{slug_tedesco(nome)}"
+    html = scarica_html(url)
+    if not html:
+        return pd.NA
+    testo = BeautifulSoup(html, "html.parser").get_text(" ")
+    modelli = [
+        r"Derzeit liegen die Wohnungspreise .*? bei\s+([0-9.]+,?[0-9]*)\s*€/m²",
+        r"Wohnungspreise im Landkreis .*? Durchschnittlich\s+([0-9.]+,?[0-9]*)\s*€",
+    ]
+    for modello in modelli:
+        trovato = re.search(modello, testo, flags=re.S)
+        if trovato and "k.A" not in trovato.group(0):
+            return numero_tedesco(trovato.group(1))
+    return pd.NA
+
+
+def prezzi_landkreise_immobilienpreise():
+    valori = {}
+    for lettera in LETTERE_PREZZI_LANDKREISE:
+        url = f"{IMMOBILIENPREISE_BASE_URL}/landkreise-mit-{lettera}"
+        html = scarica_html(url)
+        if not html:
+            continue
+        soup = BeautifulSoup(html, "html.parser")
+        for riga in soup.find_all("tr")[1:]:
+            celle = [cella.get_text(" ", strip=True) for cella in riga.find_all(["td", "th"])]
+            if len(celle) < 5:
+                continue
+            valore = numero_tedesco(celle[4])
+            if pd.isna(valore):
+                continue
+            for chiave in chiavi_area_tedesca(celle[0]):
+                valori[chiave] = float(valore)
+    return valori
+
+
+def valore_prezzo_landkreis(nome, valori_landkreise):
+    for chiave in chiavi_area_tedesca(nome):
+        if chiave in valori_landkreise:
+            return valori_landkreise[chiave]
+    return prezzo_landkreis_immobilienpreise(nome)
+
+
+def carica_prezzi_vendita_germania(geojson, mostra_progresso=False):
+    if mostra_progresso:
+        print("[Mappe Germania] Scarico prezzi appartamenti da immobilienpreise.org.", flush=True)
+
+    valori_landkreise = prezzi_landkreise_immobilienpreise()
+    righe = []
+    features = geojson.get("features", [])
+    totale = len(features)
+    for posizione, feature in enumerate(features, start=1):
+        proprieta = feature.get("properties", {})
+        codice_area = str(feature.get("id", "")).zfill(5)
+        nome = str(proprieta.get("name", "")).strip()
+        tipo_area = str(proprieta.get("districtType", "")).strip()
+        if tipo_area in {"Landkreis", "Kreis"}:
+            valore = valore_prezzo_landkreis(nome, valori_landkreise)
+        else:
+            if mostra_progresso and posizione % 35 == 0:
+                print(f"[Mappe Germania] Prezzi citta {posizione}/{totale}", flush=True)
+            valore = prezzo_citta_immobilienpreise(nome)
+        righe.append(
+            {
+                "codice_area": codice_area,
+                "prezzo_mq": valore,
+                "anno_prezzo": 2026 if pd.notna(valore) else pd.NA,
+                "fonte_prezzo": "immobilienpreise.org Wohnungspreis pro mq 2026",
+            }
+        )
+
+    return pd.DataFrame(righe)
+
+
 def carica_dati_germania(geojson=None, mostra_progresso=False):
     if mostra_progresso:
         print("[Mappe Germania] Scarico indicatori INKAR a livello Kreise.", flush=True)
@@ -339,19 +852,17 @@ def carica_dati_germania(geojson=None, mostra_progresso=False):
     affitti = scarica_indicatore_inkar("58", anno=2024).rename(
         columns={"value": "affitto_mq_mese", "anno": "anno_affitto"}
     )
-    vendite = scarica_indicatore_inkar("46", anno=2022).rename(
-        columns={"value": "prezzo_mq", "anno": "anno_prezzo"}
-    )
     redditi = scarica_indicatore_inkar("244", anno=2022).rename(
         columns={"value": "reddito_mese", "anno": "anno_reddito"}
     )
+    prezzi = carica_prezzi_vendita_germania(geojson_usato, mostra_progresso=mostra_progresso)
     dati = nomi.merge(affitti, on="codice_area", how="left")
-    dati = dati.merge(vendite, on="codice_area", how="left")
     dati = dati.merge(redditi, on="codice_area", how="left")
+    dati = dati.merge(prezzi, on="codice_area", how="left")
     dati["reddito_annuo"] = dati["reddito_mese"] * 12
     dati["paese"] = "Germania"
     dati["livello_territoriale"] = "Kreise e kreisfreie Staedte"
-    dati["fonte_prezzo"] = "INKAR Kaufwerte Bauland 2022"
+    dati["fonte_prezzo"] = dati["fonte_prezzo"].fillna("non disponibile")
     dati["fonte_affitto"] = "INKAR Angebotsmieten 2024"
     dati["fonte_reddito"] = "INKAR Haushaltseinkommen 2022"
     dati = aggiungi_indicatori_reddito(dati)
@@ -420,6 +931,116 @@ def codice_feature_germania(feature):
     return str(feature.get("id", "")).zfill(5)
 
 
+def codici_focus_francia(codice_area):
+    profilo = AGGREGAZIONI_COMUNI_FRANCIA.get(codice_area)
+    if profilo and "codici" in profilo:
+        return set(profilo["codici"])
+    return {codice_area}
+
+
+def geojson_focus_citta(paese_focus, geojson, codice_area, nome_citta):
+    if paese_focus == "FRA":
+        funzione_codice = codice_feature_francia
+        codice_mappa = codici_focus_francia(codice_area)
+    elif paese_focus == "DEU":
+        funzione_codice = codice_feature_germania
+        codice_mappa = {codice_area}
+    else:
+        return {"type": "FeatureCollection", "features": []}
+
+    features = []
+    for feature in geojson.get("features", []):
+        if funzione_codice(feature) in codice_mappa:
+            copia = copy.deepcopy(feature)
+            codice_feature = funzione_codice(feature)
+            copia["id"] = codice_feature
+            proprieta = copia.get("properties", {})
+            if isinstance(proprieta, dict):
+                proprieta["code"] = codice_feature
+                proprieta["name"] = proprieta.get("nom", nome_citta)
+                copia["properties"] = proprieta
+            features.append(copia)
+
+    if not features and funzione_codice is not None:
+        for feature in geojson.get("features", []):
+            if funzione_codice(feature) == codice_area:
+                copia = copy.deepcopy(feature)
+                copia["id"] = codice_area
+                proprieta = copia.get("properties", {})
+                if isinstance(proprieta, dict):
+                    proprieta["code"] = codice_area
+                    proprieta["name"] = nome_citta
+                    copia["properties"] = proprieta
+                features.append(copia)
+
+    return {"type": "FeatureCollection", "features": features}
+
+
+def file_focus_citta(paese_focus, nome_file):
+    parametro = FOCUS_CITTA[paese_focus]
+    return nome_file.replace(parametro["prefisso_nome_file"], parametro["prefisso_file"])
+
+
+def crea_mappe_focus_citta(dati, paese_focus, geojson, cartella_output="outputs/charts", mostra_progresso=False):
+    parametro = FOCUS_CITTA.get(paese_focus)
+    if parametro is None:
+        return []
+
+    codice_area = parametro["codice"]
+    nome_citta = parametro["nome"]
+    if paese_focus == "DEU":
+        dati_affitti, geojson_affitti = carica_dati_berlino_quartieri(dati)
+        dati_prezzi, geojson_prezzi = carica_dati_berlino_vendite(dati, mostra_progresso=mostra_progresso)
+        mappe_citta = MAPPE_BERLINO
+    else:
+        codici_citta = codici_focus_francia(codice_area)
+        dati_citta = dati.loc[dati["codice_area"].isin(codici_citta)].copy()
+        dati_citta = completa_reddito_focus_francia(dati_citta, dati, codice_area)
+        mappe_citta = MAPPE_PARIGI
+        fonte = FONTE_FRANCIA
+        funzione_codice = codice_feature_francia
+        geojson_citta = geojson_focus_citta(paese_focus, geojson, codice_area, nome_citta)
+        larghezza_bordo = 0.08
+
+    percorsi = []
+    for colonna, titolo, legenda, nome_file, percentuale, decimali in mappe_citta:
+        if paese_focus == "DEU" and colonna in {"prezzo_mq", "anni_reddito_per_80mq"}:
+            dati_citta = dati_prezzi
+            geojson_citta = geojson_prezzi
+            fonte = FONTE_BERLINO_PREZZI
+            funzione_codice = codice_feature_berlino_ortsteil
+            larghezza_bordo = 0.08
+        elif paese_focus == "DEU":
+            dati_citta = dati_affitti
+            geojson_citta = geojson_affitti
+            fonte = FONTE_BERLINO_QUARTIERI
+            funzione_codice = codice_feature_berlino
+            larghezza_bordo = 0.04
+        if not geojson_citta["features"]:
+            continue
+        if mostra_progresso:
+            print(f"[Mappe {paese_focus}] Creo {file_focus_citta(paese_focus, nome_file)}", flush=True)
+        percorso = grafico_mappa_aree_output(
+            dati_citta,
+            geojson_citta,
+            paese_focus,
+            colonna,
+            titolo,
+            legenda,
+            file_focus_citta(paese_focus, nome_file),
+            cartella_output,
+            fonte,
+            funzione_codice,
+            percentuale=percentuale,
+            decimali=decimali,
+            larghezza_bordo=larghezza_bordo,
+            margine_geo=None,
+        )
+        if percorso:
+            percorsi.append(percorso)
+    return percorsi
+
+
 def layout_mappa(longitudine_min, longitudine_max, latitudine_min, latitudine_max):
     larghezza_geo = max(longitudine_max - longitudine_min, 0.1)
     altezza_geo = max(latitudine_max - latitudine_min, 0.1)
@@ -478,9 +1099,157 @@ def titolo_su_piu_righe(titolo, larghezza=64):
     return "\n".join(textwrap.wrap(titolo, width=larghezza, break_long_words=False))
 
 
+def fonte_su_piu_righe(fonte, larghezza=130):
+    testo = f"Fonte: {fonte} | {WATERMARK}"
+    return "\n".join(textwrap.wrap(testo, width=larghezza, break_long_words=False))
+
+
 def salva_mappa(figura, percorso):
     figura.savefig(percorso, dpi=170)
     plt.close(figura)
+
+
+def dipartimento_francese(codice_area):
+    codice = str(codice_area).strip().upper()
+    if codice.startswith(("97", "98")):
+        return codice[:3]
+    return codice[:2]
+
+
+def etichetta_dipartimento_francese(codice):
+    codice_testo = str(codice).strip().upper()
+    nome = NOMI_DIPARTIMENTI_FRANCESI.get(codice_testo)
+    if nome:
+        return f"{nome} ({codice_testo})"
+    return f"Dip. {codice_testo}"
+
+
+def aggrega_range_locale(dati, gruppo, etichetta, colonna):
+    dati_validi = dati.dropna(subset=[gruppo, etichetta, colonna]).copy()
+    dati_validi[colonna] = pd.to_numeric(dati_validi[colonna], errors="coerce")
+    dati_validi = dati_validi.dropna(subset=[colonna])
+    if dati_validi.empty:
+        return pd.DataFrame()
+
+    colonne_gruppo = [gruppo] if gruppo == etichetta else [gruppo, etichetta]
+    aggregato = (
+        dati_validi.groupby(colonne_gruppo, as_index=False)
+        .agg(
+            valore_mediano=(colonna, "median"),
+            valore_minimo=(colonna, "min"),
+            valore_massimo=(colonna, "max"),
+            aree=(colonna, "count"),
+        )
+        .sort_values("valore_mediano", ascending=False)
+    )
+    return aggregato
+
+
+def grafico_range_locale(
+    dati,
+    paese_focus,
+    gruppo,
+    etichetta,
+    colonna,
+    titolo,
+    asse_x,
+    nome_file,
+    cartella_output,
+    fonte,
+    limite_righe=None,
+):
+    range_locale = aggrega_range_locale(dati, gruppo, etichetta, colonna)
+    if range_locale.empty:
+        return None
+
+    if limite_righe:
+        range_locale = range_locale.head(limite_righe).copy()
+
+    altezza = max(6.8, min(18, 0.34 * len(range_locale) + 2.5))
+    figura, asse = plt.subplots(figsize=(11, altezza))
+    posizioni = range(len(range_locale))
+    for posizione, riga in zip(posizioni, range_locale.itertuples(index=False)):
+        asse.hlines(
+            posizione,
+            riga.valore_minimo,
+            riga.valore_massimo,
+            color=COLORE_EU27,
+            linewidth=2,
+            alpha=0.65,
+        )
+        asse.scatter(riga.valore_mediano, posizione, color=COLORE_PRINCIPALE, s=46, zorder=3)
+
+    asse.set_yticks(list(posizioni))
+    asse.set_yticklabels(range_locale[etichetta])
+    asse.invert_yaxis()
+    asse.set_title(titolo_su_piu_righe(titolo), fontsize=14, fontweight="bold", loc="left", pad=12)
+    asse.set_xlabel(asse_x)
+    asse.grid(axis="x", alpha=0.22)
+    asse.tick_params(axis="y", labelsize=9.5)
+    formatter = ScalarFormatter(useOffset=False)
+    formatter.set_scientific(False)
+    asse.xaxis.set_major_formatter(formatter)
+    figura.text(
+        0.01,
+        0.01,
+        fonte_su_piu_righe(fonte),
+        ha="left",
+        va="bottom",
+        fontsize=7.8,
+        color="#333333",
+    )
+
+    percorso = cartella_paese(cartella_output, paese_focus, "focus") / nome_file
+    plt.tight_layout(rect=[0, 0.08, 0.99, 0.95])
+    figura.savefig(percorso, dpi=170)
+    plt.close(figura)
+    return percorso
+
+
+def crea_range_francia(dati, cartella_output="outputs/charts", mostra_progresso=False):
+    dati_range = dati.loc[
+        ~dati["codice_area"].isin(list(AGGREGAZIONI_COMUNI_FRANCIA))
+        & ~dati["codice_area"].str.startswith(("97", "98", "99"), na=False)
+    ].copy()
+    dati_range["dipartimento"] = dati_range["codice_area"].map(dipartimento_francese)
+    dati_range["etichetta_range"] = dati_range["dipartimento"].map(etichetta_dipartimento_francese)
+    if mostra_progresso:
+        print("[Focus Francia] Creo francia_range_prezzi_dvf_dipartimenti.png", flush=True)
+
+    percorso = grafico_range_locale(
+        dati_range,
+        "FRA",
+        "dipartimento",
+        "etichetta_range",
+        "prezzo_mq",
+        "Prezzi DVF: mediana e range tra comuni - dipartimenti francesi",
+        "euro/mq",
+        "francia_range_prezzi_dvf_dipartimenti.png",
+        cartella_output,
+        FONTE_FRANCIA,
+        limite_righe=25,
+    )
+    return [percorso] if percorso else []
+
+
+def crea_range_germania(dati, cartella_output="outputs/charts", mostra_progresso=False):
+    dati_range, geojson = carica_dati_berlino_quartieri(dati)
+    if mostra_progresso:
+        print("[Focus Germania] Creo berlino_range_affitti_quartieri.png", flush=True)
+
+    percorso = grafico_range_locale(
+        dati_range,
+        "DEU",
+        "bezirk",
+        "bezirk",
+        "affitto_mq_mese",
+        "Affitti: mediana e range tra quartieri statistici - Bezirke di Berlino",
+        "euro/mq/mese",
+        "berlino_range_affitti_quartieri.png",
+        cartella_output,
+        FONTE_BERLINO_QUARTIERI,
+    )
+    return [percorso] if percorso else []
 
 
 def grafico_mappa_aree_output(
@@ -497,6 +1266,7 @@ def grafico_mappa_aree_output(
     percentuale=False,
     decimali=0,
     larghezza_bordo=0.08,
+    margine_geo=0.25,
 ):
     dati_mappa = dati.dropna(subset=[colonna, "codice_area"]).copy()
     dati_mappa[colonna] = pd.to_numeric(dati_mappa[colonna], errors="coerce")
@@ -525,8 +1295,15 @@ def grafico_mappa_aree_output(
         colore = scala_colori(normalizzazione(valore)) if valore is not None else "#E6E6E6"
         disegna_area(asse, feature, colore, larghezza_bordo=larghezza_bordo)
 
-    asse.set_xlim(longitudine_min - 0.25, longitudine_max + 0.25)
-    asse.set_ylim(latitudine_min - 0.25, latitudine_max + 0.25)
+    if margine_geo is None:
+        margine_x = max((longitudine_max - longitudine_min) * 0.04, 0.006)
+        margine_y = max((latitudine_max - latitudine_min) * 0.04, 0.006)
+    else:
+        margine_x = margine_geo
+        margine_y = margine_geo
+
+    asse.set_xlim(longitudine_min - margine_x, longitudine_max + margine_x)
+    asse.set_ylim(latitudine_min - margine_y, latitudine_max + margine_y)
     asse.set_aspect("equal")
     asse.axis("off")
     figura.text(0.03, titolo_y, titolo_su_piu_righe(titolo), ha="left", va="top", fontsize=14, fontweight="bold")
@@ -548,10 +1325,10 @@ def grafico_mappa_aree_output(
     figura.text(
         0.01,
         0.012,
-        f"Fonte: {fonte} | {WATERMARK}",
+        fonte_su_piu_righe(fonte),
         ha="left",
         va="bottom",
-        fontsize=8.5,
+        fontsize=7.8,
         color="#333333",
     )
 
@@ -599,6 +1376,7 @@ def crea_mappe_germania(dati, geojson, cartella_output="outputs/charts", mostra_
     for colonna, titolo, legenda, nome_file, percentuale, decimali in MAPPE_GERMANIA:
         if mostra_progresso:
             print(f"[Mappe Germania] Creo {nome_file}", flush=True)
+        fonte = FONTE_GERMANIA_PREZZI if colonna in {"prezzo_mq", "anni_reddito_per_80mq"} else FONTE_GERMANIA
         percorso = grafico_mappa_aree_output(
             dati,
             geojson,
@@ -608,7 +1386,7 @@ def crea_mappe_germania(dati, geojson, cartella_output="outputs/charts", mostra_
             legenda,
             nome_file,
             cartella_output,
-            FONTE_GERMANIA,
+            fonte,
             codice_feature_germania,
             percentuale=percentuale,
             decimali=decimali,
@@ -644,8 +1422,22 @@ def etichetta_valore(valore, percentuale=False, decimali=1):
 def metriche_focus(paese_focus):
     profilo = profilo_paese(paese_focus)
     if profilo["iso3"] == "DEU":
-        titolo_acquisto = "Acquisto (proxy): suolo edificabile\n(euro/mq)"
-        titolo_reddito_acquisto = "Acquisto 80 mq (proxy suolo)\n(anni di reddito annuo)"
+        return [
+            {
+                "colonna": "affitto_mq_mese",
+                "titolo": "Affitto mensile\n(euro/mq/mese)",
+                "unita": "euro per mq al mese",
+                "percentuale": False,
+                "decimali": 1,
+            },
+            {
+                "colonna": "affitto_40mq_su_reddito_pct",
+                "titolo": "Affitto 40 mq\n(% del reddito annuo)",
+                "unita": "% del reddito annuo",
+                "percentuale": True,
+                "decimali": 0,
+            },
+        ]
     else:
         titolo_acquisto = "Acquisto: prezzo al mq\n(euro/mq)"
         titolo_reddito_acquisto = "Acquisto 80 mq\n(anni di reddito annuo)"
@@ -689,8 +1481,18 @@ def grafico_focus_citta(dati, paese_focus, codice_area, nome_citta, nome_file, c
 
     profilo = profilo_paese(paese_focus)
     metriche = metriche_focus(paese_focus)
-    figura, assi = plt.subplots(2, 2, figsize=(10.8, 7.4))
-    assi_piatte = assi.flatten()
+    if len(metriche) == 2:
+        figura, assi = plt.subplots(1, 2, figsize=(10.8, 4.8))
+        assi_piatte = assi.flatten()
+        layout_rect = [0, 0.12, 1, 0.72]
+        titolo_y = 0.98
+        intestazione_y = 0.82
+    else:
+        figura, assi = plt.subplots(2, 2, figsize=(10.8, 7.4))
+        assi_piatte = assi.flatten()
+        layout_rect = [0, 0.06, 1, 0.84]
+        titolo_y = 0.98
+        intestazione_y = 0.875
     righe_summary = []
     for asse, metrica in zip(assi_piatte, metriche):
         colonna = metrica["colonna"]
@@ -735,27 +1537,32 @@ def grafico_focus_citta(dati, paese_focus, codice_area, nome_citta, nome_file, c
             }
         )
 
-    testo_proxy = " (proxy suolo)" if profilo["iso3"] == "DEU" else ""
+    titolo_focus = (
+        f"Focus {nome_citta}: affitto e rapporto al reddito"
+        if profilo["iso3"] == "DEU"
+        else f"Focus {nome_citta}: affitto e acquisto rispetto al reddito"
+    )
     figura.suptitle(
-        f"Focus {nome_citta}: affitto e acquisto{testo_proxy} rispetto al reddito",
+        titolo_focus,
         x=0.01,
-        y=0.98,
+        y=titolo_y,
         ha="left",
         fontsize=16,
         fontweight="bold",
     )
-    figura.text(0.285, 0.875, "AFFITTO", ha="center", va="center", fontsize=12.5, fontweight="bold")
-    figura.text(0.745, 0.875, "ACQUISTO", ha="center", va="center", fontsize=12.5, fontweight="bold")
+    intestazione_destra = "RAPPORTO AL REDDITO" if profilo["iso3"] == "DEU" else "ACQUISTO"
+    figura.text(0.285, intestazione_y, "AFFITTO", ha="center", va="center", fontsize=12.5, fontweight="bold")
+    figura.text(0.745, intestazione_y, intestazione_destra, ha="center", va="center", fontsize=12.5, fontweight="bold")
     figura.text(
         0.01,
         0.01,
-        f"Fonte: {fonte} | {WATERMARK}",
+        fonte_su_piu_righe(fonte),
         ha="left",
         va="bottom",
-        fontsize=8.8,
+        fontsize=7.8,
         color="#333333",
     )
-    plt.tight_layout(rect=[0, 0.06, 1, 0.84])
+    plt.tight_layout(rect=layout_rect)
     percorso = cartella_paese(cartella_output, paese_focus, "focus") / nome_file
     figura.savefig(percorso, dpi=170)
     plt.close(figura)
@@ -788,7 +1595,7 @@ def crea_focus_germania(dati, cartella_output="outputs/charts", mostra_progresso
         "DEU",
         "11000",
         "Berlino",
-        "berlino_focus_affitti_vendita_reddito.png",
+        "berlino_focus_affitti_reddito.png",
         cartella_output,
         FONTE_GERMANIA,
     )
@@ -801,14 +1608,35 @@ def crea_mappe_e_focus_europa(cartella_output="outputs/charts", paesi=None, most
 
     if "FRA" in paesi_focus:
         dati_francia = carica_dati_francia(mostra_progresso=mostra_progresso)
+        geojson_francia = scarica_geojson_francia()
         salva_summary_locale(dati_francia, cartella_output, "FRA", "francia_comuni_affitti_vendita_reddito.csv")
+        percorsi.extend(crea_range_francia(dati_francia, cartella_output, mostra_progresso=mostra_progresso))
         percorsi.extend(crea_mappe_francia(dati_francia, cartella_output, mostra_progresso=mostra_progresso))
+        percorsi.extend(
+            crea_mappe_focus_citta(
+                dati_francia,
+                "FRA",
+                geojson_francia,
+                cartella_output,
+                mostra_progresso=mostra_progresso,
+            )
+        )
         percorsi.extend(crea_focus_francia(dati_francia, cartella_output, mostra_progresso=mostra_progresso))
 
     if "DEU" in paesi_focus:
         geojson_germania = scarica_geojson_germania()
         dati_germania = carica_dati_germania(geojson=geojson_germania, mostra_progresso=mostra_progresso)
-        salva_summary_locale(dati_germania, cartella_output, "DEU", "germania_kreise_affitti_vendita_reddito.csv")
+        salva_summary_locale(dati_germania, cartella_output, "DEU", "germania_kreise_affitti_reddito.csv")
+        percorsi.extend(crea_range_germania(dati_germania, cartella_output, mostra_progresso=mostra_progresso))
+        percorsi.extend(
+            crea_mappe_focus_citta(
+                dati_germania,
+                "DEU",
+                geojson_germania,
+                cartella_output,
+                mostra_progresso=mostra_progresso,
+            )
+        )
         percorsi.extend(
             crea_mappe_germania(dati_germania, geojson_germania, cartella_output, mostra_progresso=mostra_progresso)
         )
