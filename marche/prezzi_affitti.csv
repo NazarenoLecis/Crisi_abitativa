@@ -1,0 +1,38 @@
+fonte,anno_mese,territorio,scala,indicatore,valore,unita,note
+Immobiliare.it,2026-05,Marche,regione,range vendita province minimo,1314,EUR/mq,Fermo provincia
+Immobiliare.it,2026-05,Marche,regione,range vendita province massimo,1817,EUR/mq,Ascoli Piceno provincia
+Immobiliare.it,2026-05,Marche,regione,range affitto province minimo,8.33,EUR/mq/mese,Fermo provincia
+Immobiliare.it,2026-05,Marche,regione,range affitto province massimo,9.79,EUR/mq/mese,Pesaro Urbino provincia
+Immobiliare.it,2026-05,Provincia di Macerata,provincia,prezzo richiesto vendita medio,1389,EUR/mq,annunci residenziali
+Immobiliare.it,2026-05,Provincia di Macerata,provincia,prezzo richiesto affitto medio,9.31,EUR/mq/mese,annunci residenziali
+Immobiliare.it,2026-05,Comune di Macerata,comune,prezzo richiesto vendita medio,1159,EUR/mq,annunci residenziali
+Immobiliare.it,2026-05,Comune di Macerata,comune,prezzo richiesto affitto medio,6.71,EUR/mq/mese,annunci residenziali
+Immobiliare.it,2026-05,Provincia di Macerata,provincia,comune vendita piu caro,2581,EUR/mq,Porto Recanati
+Immobiliare.it,2026-05,Provincia di Macerata,provincia,comune vendita piu economico,430,EUR/mq,Fiuminata
+Immobiliare.it,2026-05,Provincia di Macerata,provincia,comune affitto piu caro,10.98,EUR/mq/mese,Civitanova Marche
+Immobiliare.it,2026-05,Provincia di Macerata,provincia,comune affitto piu economico,3.93,EUR/mq/mese,Camerino
+Immobiliare.it,2026-05,Provincia di Macerata,provincia,annunci vendita,5411,annunci,offerta immobiliare in tempo reale
+Immobiliare.it,2026-05,Provincia di Macerata,provincia,annunci affitto,300,annunci,offerta immobiliare in tempo reale
+Immobiliare.it,2026-05,Comune di Macerata,comune,annunci vendita,377,annunci,offerta immobiliare in tempo reale
+Immobiliare.it,2026-05,Comune di Macerata,comune,annunci affitto,28,annunci,offerta immobiliare in tempo reale
+RealAdvisor,2026-06,Comune di Macerata,comune,prezzo medio immobili,1181,EUR/mq,modello proprietario
+RealAdvisor,2026-06,Comune di Macerata,comune,prezzo medio appartamenti,1195,EUR/mq,range 80%: 398-2962 EUR/mq
+RealAdvisor,2026-06,Comune di Macerata,comune,prezzo medio case,1277,EUR/mq,range 80%: 341-3977 EUR/mq
+RealAdvisor,2026-06,Comune di Macerata,comune,affitto medio appartamenti,598,EUR/mese,range 80%: 199-1481 EUR/mese
+RealAdvisor,2026-06,Comune di Macerata,comune,affitto medio case,1238,EUR/mese,range 80%: 330-3856 EUR/mese
+RealAdvisor,2026-06,Provincia di Macerata,provincia,prezzo medio immobili,985,EUR/mq,modello proprietario
+RealAdvisor,2026-06,Provincia di Macerata,provincia,prezzo medio appartamenti,1000,EUR/mq,range 80%: 333-2478 EUR/mq
+RealAdvisor,2026-06,Provincia di Macerata,provincia,prezzo medio case,1041,EUR/mq,range 80%: 278-3240 EUR/mq
+RealAdvisor,2026-06,Provincia di Macerata,provincia,affitto medio appartamenti,723,EUR/mese,range 80%: 241-1793 EUR/mese
+RealAdvisor,2026-06,Provincia di Macerata,provincia,affitto medio case,1231,EUR/mese,range 80%: 328-3833 EUR/mese
+Immobiliare.it,2026-05,Italia,nazione,range vendita regioni minimo,960,EUR/mq,Calabria
+Immobiliare.it,2026-05,Italia,nazione,range vendita regioni massimo,3707,EUR/mq,Trentino Alto Adige
+Immobiliare.it,2026-05,Italia,nazione,range affitto regioni minimo,7.16,EUR/mq/mese,Molise
+Immobiliare.it,2026-05,Italia,nazione,range affitto regioni massimo,23.81,EUR/mq/mese,Valle d'Aosta
+Immobiliare.it,2026-05,Marche,regione,prezzo richiesto vendita medio,1617,EUR/mq,tabella regioni Italia
+Immobiliare.it,2026-05,Marche,regione,prezzo richiesto affitto medio,9.2,EUR/mq/mese,tabella regioni Italia
+RealAdvisor,2026-06,Italia,nazione,prezzo medio immobili,1544,EUR/mq,modello proprietario
+RealAdvisor,2026-06,Italia,nazione,prezzo medio appartamenti,1640,EUR/mq,range 80%: 507-4425 EUR/mq
+RealAdvisor,2026-06,Italia,nazione,prezzo medio case,1515,EUR/mq,range 80%: 353-4689 EUR/mq
+RealAdvisor,2026-06,Italia,nazione,affitto medio appartamenti,948,EUR/mese,range 80%: 293-2557 EUR/mese
+RealAdvisor,2026-06,Italia,nazione,affitto annuo appartamenti per mq,126,EUR/mq/anno,equivale a 10.5 EUR/mq/mese

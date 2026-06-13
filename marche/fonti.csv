@@ -1,0 +1,19 @@
+nome,tipo,link,note
+Immobiliare.it Marche,portale annunci,https://www.immobiliare.it/mercato-immobiliare/marche/,prezzi richiesti vendita/affitto maggio 2026
+Immobiliare.it provincia Macerata,portale annunci,https://www.immobiliare.it/mercato-immobiliare/marche/macerata-provincia/,prezzi richiesti e annunci maggio 2026
+Immobiliare.it comune Macerata,portale annunci,https://www.immobiliare.it/mercato-immobiliare/marche/macerata/,prezzi richiesti e annunci maggio 2026
+RealAdvisor comune Macerata,stima mercato,https://realadvisor.it/it/mercato-immobiliare/comune-macerata-it,stima prezzi e affitti giugno 2026
+RealAdvisor provincia Macerata,stima mercato,https://realadvisor.it/it/mercato-immobiliare/provincia-macerata,stima prezzi e affitti giugno 2026
+Agenzia Entrate OMI statistiche regionali Marche 2026,pdf ufficiale,https://www.agenziaentrate.gov.it/portale/documents/20143/10101383/SR2026_MARCHE.pdf/f070a728-7d93-504a-7a50-00d7a8511d1f?t=1780658594099,NTN IMI locazioni e quotazioni 2025
+Istat abitazioni 2021,fonte ufficiale,https://www.istat.it/comunicato-stampa/censimento-permanente-2021-caratteristiche-delle-abitazioni/,definizioni e quadro nazionale abitazioni occupate/non occupate
+Openpolis/Istat abitazioni comuni Marche,xls,https://s3.eu-central-1.amazonaws.com/minidossier.openpolis.it/openbilanci/2021/2021abitazioni/marche.xls,elaborazione Openpolis su dati Istat 2021 per comune
+SICET dati ministeriali sfratti 2024,mirror dati Ministero Interno,https://www.sicetcaserta.it/2025/09/28/dati-ministeriali-sullandamento-degli-sfratti-nel-2024/,include file dati Ministero Interno 2024 e serie storica
+Tribunale di Macerata area civile,sito ufficiale,https://tribunale-macerata.giustizia.it/it/area_civile_cancellerie.page?frame5_item=2,prima udienza convalida sfratto ogni mercoledi
+Comune Macerata graduatoria ERP 2025,sito ufficiale,https://www.comune.macerata.it/novita/assegnazione-degli-alloggi-di-edilizia-residenziale-pubblica-graduatoria-definitiva-2025/,graduatoria definitiva ERP 2025
+Comune Macerata servizio ERP,sito ufficiale,https://www.comune.macerata.it/servizio/edilizia-residenziale-pubblica-case-popolari/,bando ERP e requisiti
+Regione Marche reinvestimento ERAP,sito ufficiale,https://www.regione.marche.it/News-ed-Eventi/Post/102657/Erap-Approvato-il-Programma-di-reinvestimento-dei-proventi-delle-alienazioni-alloggi-erp,nuovi alloggi e manutenzioni finanziate
+ANSA ERAP Marche 2024,notizia su studio Nomisma ERAP,https://www.ansa.it/marche/notizie/2025/12/05/erap-marche-quasi-16mila-alloggi-e-470-assegnazioni-nel-2024_46f017a6-cf29-4dda-9121-d4f43121a949.html,patrimonio ERAP e gap domanda/offerta
+Ministero Turismo BDSR,sito ufficiale,https://www.ministeroturismo.gov.it/banca-dati-strutture-ricettive-bdsr/,affitti brevi e strutture ricettive; dashboard non pienamente open
+Immobiliare.it Italia,portale annunci,https://www.immobiliare.it/mercato-immobiliare/,prezzi richiesti per regioni e capoluoghi maggio 2026
+RealAdvisor Italia,stima mercato,https://realadvisor.it/it/mercato-immobiliare,stima prezzi e affitti giugno 2026
+Agenzia Entrate OMI Rapporto immobiliare residenziale 2026,pdf ufficiale,https://www.agenziaentrate.gov.it/portale/documents/20143/263076/RI2026_Residenziale20260521.pdf/892125df-86a3-c21a-f8a1-86323f45ae93?t=1779343518553,dati nazionali 2025 su compravendite e locazioni

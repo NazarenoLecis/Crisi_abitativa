@@ -1,0 +1,18 @@
+fonte,anno,territorio,scala,abitazioni_non_occupate,abitazioni_occupate,abitazioni_totali,quota_non_occupate_percentuale,note
+Istat Censimento permanente via Openpolis,2021,Marche,regione,236436,635066,871502,27.1,non occupate = vuote o occupate solo da non residenti
+Istat Censimento permanente via Openpolis,2021,Provincia di Macerata,provincia,60243,128137,188380,32.0,quota piu alta tra le province marchigiane
+Istat Censimento permanente via Openpolis,2021,Comune di Macerata,comune,4535,18308,22843,19.9,
+Istat Censimento permanente via Openpolis,2021,Ancona,provincia,61163,201642,262805,23.3,
+Istat Censimento permanente via Openpolis,2021,Ascoli Piceno,provincia,37059,85354,122413,30.3,
+Istat Censimento permanente via Openpolis,2021,Fermo,provincia,26080,70414,96494,27.0,
+Istat Censimento permanente via Openpolis,2021,Pesaro e Urbino,provincia,51891,149519,201410,25.8,
+Istat Censimento permanente via Openpolis,2021,Porto Recanati,comune MC,5220,5499,10719,48.7,primo comune MC per numero di abitazioni non occupate
+Istat Censimento permanente via Openpolis,2021,Civitanova Marche,comune MC,4470,17698,22168,20.2,
+Istat Censimento permanente via Openpolis,2021,Camerino,comune MC,2763,2858,5621,49.2,
+Istat Censimento permanente via Openpolis,2021,Tolentino,comune MC,2516,7612,10128,24.8,
+Istat Censimento permanente via Openpolis,2021,Ussita,comune MC,2169,236,2405,90.2,quota piu alta tra i comuni MC
+Istat Censimento permanente via Openpolis,2021,Castelsantangelo sul Nera,comune MC,838,148,986,85.0,
+Istat Censimento permanente via Openpolis,2021,Monte Cavallo,comune MC,250,57,307,81.4,
+Istat Censimento permanente via Openpolis,2021,Bolognola,comune MC,300,75,375,80.0,
+Istat Censimento permanente via Openpolis,2021,Fiastra,comune MC,1048,324,1372,76.4,
+Istat Censimento permanente,2021,Italia,nazione,9581772,25690057,35271829,27.2,non occupate = vuote o occupate solo da non residenti

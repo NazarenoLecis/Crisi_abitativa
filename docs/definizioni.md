@@ -150,6 +150,18 @@ Limite: e' utile per confronti generali, ma non identifica da solo il peso relat
 
 ## Prezzi, redditi e investimenti
 
+### Sfratti
+
+I dati sugli sfratti derivano dalle statistiche del Ministero dell'Interno sulle procedure di rilascio di immobili ad uso abitativo. Nel progetto sono usati tre indicatori distinti:
+
+- `provvedimenti_totali`: provvedimenti esecutivi di sfratto emessi;
+- `richieste_esecuzione`: richieste presentate all'Ufficiale Giudiziario;
+- `sfratti_eseguiti`: sfratti eseguiti con l'intervento dell'Ufficiale Giudiziario.
+
+Il motivo del provvedimento e' distinto tra necessita' del locatore, finita locazione e morosita o altra causa. Le tabelle provinciali e regionali separano anche capoluogo e resto provincia per le cause del provvedimento.
+
+Limite: richieste di esecuzione ed esecuzioni non misurano direttamente i tempi medi di sfratto, perche' dipendono da prassi locali degli uffici giudiziari, rinvii, sospensioni e modalita' operative territoriali.
+
 ### House Price Index Eurostat
 
 L'indice dei prezzi delle case Eurostat misura la variazione dei prezzi delle abitazioni residenziali acquistate dalle famiglie, nuove ed esistenti, incluse diverse tipologie di abitazione.

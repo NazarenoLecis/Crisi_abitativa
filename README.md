@@ -49,6 +49,7 @@ python3 -m scripts.run.genera_grafici
 | Solo mappe comunali Italia | `scripts/run/mappe_comunali_italia.py` | Mappe regionali a livello comunale |
 | Solo mappe e focus Francia/Germania | `scripts/run/mappe_focus_europa.py` | Mappe locali e focus Parigi/Berlino |
 | Solo affitti brevi Italia | `scripts/run/affitti_brevi_italia.py` | CSV, classifiche e mappe dal registro CIN |
+| Solo sfratti Italia | `scripts/run/aggiorna_sfratti_italia.py` | CSV 2024 per Italia, regioni, province e serie storica nazionale |
 | Solo Borsino | `scripts/run/focus_borsino_italia.py` | Focus opzionale con API Borsino |
 | Vedere dati OECD disponibili | `scripts/run/estrai_ocse.py` | Tabelle a terminale, non grafici |
 | Confrontare valori OECD a terminale | `scripts/run/analisi_paesi.py` | Tabelle a terminale, non grafici |
@@ -189,6 +190,7 @@ Il focus locale sui capoluoghi italiani usa:
 - lista dei comuni da ISTAT, con default sui capoluoghi di provincia, citta' metropolitane e liberi consorzi;
 - quotazioni OMI Agenzia Entrate per prezzi di vendita e canoni di locazione;
 - redditi dichiarati comunali MEF/Dipartimento Finanze;
+- dati Ministero dell'Interno sugli sfratti 2024, con dettaglio per regioni e province;
 - mediana semplice delle zone OMI del comune, senza pesi per transazioni, stock o superficie.
 
 Il comando produce tre versioni: capoluoghi di regione, regioni e province. Le versioni regionali
@@ -218,6 +220,25 @@ Output:
 - `outputs/italia/charts/locale/mappe_province/`
 - `outputs/italia/charts/locale/mappe_comunali/`
 - `outputs/italia/summary/locale/`
+
+I file `focus_locale_regioni_omi_mef.csv` e `focus_locale_province_omi_mef.csv`
+includono anche colonne `sfratti_2024_*`. Per usare solo il blocco sfratti senza
+rigenerare OMI/MEF, lancia:
+
+```bash
+python3 scripts/run/aggiorna_sfratti_italia.py
+```
+
+Il comando salva anche:
+
+- `italia/sfratti/sfratti_italia_2024.csv`
+- `italia/sfratti/sfratti_regioni_2024.csv`
+- `italia/sfratti/sfratti_province_2024.csv`
+- `italia/sfratti/sfratti_italia_serie_storica_2004_2024.csv`
+- `outputs/italia/summary/locale/sfratti_italia_2024.csv`
+- `outputs/italia/summary/locale/sfratti_regioni_2024.csv`
+- `outputs/italia/summary/locale/sfratti_province_2024.csv`
+- `outputs/italia/summary/locale/sfratti_italia_serie_storica_2004_2024.csv`
 
 ### Sezione aggiuntiva Borsino
 

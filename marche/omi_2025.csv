@@ -1,0 +1,25 @@
+fonte,anno,territorio,scala,indicatore,valore,unita,note
+Agenzia Entrate OMI,2025,Marche,regione,NTN compravendite abitazioni,17410,NTN,variazione 2025/2024 +3.9%
+Agenzia Entrate OMI,2025,Marche,regione,IMI compravendite abitazioni,1.96,percentuale,differenza IMI 2025/2024 +0.07
+Agenzia Entrate OMI,2025,Provincia di Macerata,provincia,NTN compravendite abitazioni,3377,NTN,variazione 2025/2024 -0.4%
+Agenzia Entrate OMI,2025,Provincia di Macerata,provincia,IMI compravendite abitazioni,1.75,percentuale,differenza IMI 2025/2024 -0.01
+Agenzia Entrate OMI,2025,Comune di Macerata,comune,NTN compravendite abitazioni,484,NTN,variazione 2025/2024 +7.7%
+Agenzia Entrate OMI,2025,Comune di Macerata,comune,IMI compravendite abitazioni,2.10,percentuale,differenza IMI 2025/2024 +0.15
+Agenzia Entrate OMI,2025,Comune di Macerata,comune,quotazione media,1261,EUR/mq,variazione 2025/2024 +0.9%
+Agenzia Entrate OMI,2025,Comune di Macerata,comune,abitazioni locate totali,1694,contratti registrati,variazione 2025/2024 -2.5%; esclusi affitti brevi sotto 30 giorni
+Agenzia Entrate OMI,2025,Comune di Macerata,comune,locazioni ORD_T,291,contratti registrati,ordinario transitorio; variazione +11.5%; quota 17.2%; IML 3.0%
+Agenzia Entrate OMI,2025,Comune di Macerata,comune,locazioni ORD_L,148,contratti registrati,ordinario lungo periodo; variazione -3.3%; quota 8.7%; IML 1.5%
+Agenzia Entrate OMI,2025,Comune di Macerata,comune,locazioni AGE_T,793,contratti registrati,agevolato transitorio; variazione -1.4%; quota 46.8%; IML 8.2%
+Agenzia Entrate OMI,2025,Comune di Macerata,comune,locazioni AGE_L,462,contratti registrati,agevolato lungo periodo; variazione -11.0%; quota 27.3%; IML 4.8%
+Agenzia Entrate OMI,2025,Marche,regione,abitazioni locate totali,28171,contratti registrati,variazione 2025/2024 +2.8%; IML 7.5%
+Agenzia Entrate OMI,2025,Marche,regione,locazioni ORD_T,7256,contratti registrati,variazione +3.5%; quota 25.8%; IML 1.9%
+Agenzia Entrate OMI,2025,Marche,regione,locazioni ORD_L,6505,contratti registrati,variazione -1.6%; quota 23.1%; IML 1.7%
+Agenzia Entrate OMI,2025,Marche,regione,locazioni AGE_T,4246,contratti registrati,variazione +4.5%; quota 15.1%; IML 1.1%
+Agenzia Entrate OMI,2025,Marche,regione,locazioni AGE_L,10164,contratti registrati,variazione +4.5%; quota 36.1%; IML 2.7%
+Agenzia Entrate OMI,2025,Italia,nazione,NTN compravendite abitazioni,766757,NTN,variazione 2025/2024 +6.4%; esclusi comuni con catasto tavolare
+Agenzia Entrate OMI,2025,Italia,nazione,IMI compravendite abitazioni,2.20,percentuale,differenza IMI 2025/2024 +0.13
+Agenzia Entrate OMI,2025,Italia,nazione,abitazioni locate totali analizzate,1038668,contratti registrati,quattro segmenti OMI; variazione 2025/2024 +1.5%; IML 6.9%
+Agenzia Entrate OMI,2025,Italia,nazione,locazioni ORD_L,409986,contratti registrati,ordinario lungo periodo; variazione -2.4%; quota 39.5%; IML 2.7%
+Agenzia Entrate OMI,2025,Italia,nazione,locazioni ORD_T,300003,contratti registrati,ordinario transitorio; variazione +2.3%; quota 28.9%; IML 2.0%
+Agenzia Entrate OMI,2025,Italia,nazione,locazioni AGE_L,257636,contratti registrati,agevolato lungo periodo; variazione +6.0%; quota 24.8%; IML 1.7%
+Agenzia Entrate OMI,2025,Italia,nazione,locazioni AGE_T,71043,contratti registrati,agevolato transitorio; variazione +6.1%; quota 6.8%; IML 0.5%
