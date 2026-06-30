@@ -489,6 +489,7 @@ def riepilogo_quotazioni_citta(frame, citta):
 
     affitti_validi = zone["affitto_medio_eur_m2_mese"].dropna()
     affitto_mediano = float(affitti_validi.median()) if not affitti_validi.empty else None
+    affitto_medio = float(affitti_validi.mean()) if not affitti_validi.empty else None
     return {
         "comune": citta["comune"],
         "provincia": citta["provincia"],
@@ -499,9 +500,11 @@ def riepilogo_quotazioni_citta(frame, citta):
         "ambito_label": citta["ambito_label"],
         "semestre_omi": frame["semestre"].iloc[0],
         "zone_omi": int(zone["zona"].nunique()),
+        "prezzo_mq_medio": float(zone["prezzo_medio_eur_m2"].mean()),
         "prezzo_mq_mediano": float(zone["prezzo_medio_eur_m2"].median()),
         "prezzo_mq_min_zona": float(zone["prezzo_medio_eur_m2"].min()),
         "prezzo_mq_max_zona": float(zone["prezzo_medio_eur_m2"].max()),
+        "affitto_mq_mese_medio": affitto_medio,
         "affitto_mq_mese_mediano": affitto_mediano,
         "affitto_mq_mese_min_zona": float(affitti_validi.min()) if not affitti_validi.empty else None,
         "affitto_mq_mese_max_zona": float(affitti_validi.max()) if not affitti_validi.empty else None,
