@@ -5,7 +5,7 @@ import warnings
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter, ScalarFormatter
 import pandas as pd
-from scripts.helpers.grafici import COLORE_EU27, COLORE_PRINCIPALE, formatta_asse_y
+from scripts.helpers.grafici import COLORE_EU27, COLORE_ITALIA, COLORE_PRINCIPALE, formatta_asse_y
 from scripts.helpers.paesi import cartella_paese, normalizza_codici_paesi, profilo_paese
 from scripts.helpers.utils import WATERMARK, scarica_bytes
 
@@ -130,6 +130,8 @@ def colore_barra(paese, paese_focus="ITA"):
     profilo = profilo_paese(paese_focus)
     if paese == profilo["nome_oecd_ahd"]:
         return profilo["colore"]
+    if paese == profilo_paese("ITA")["nome_oecd_ahd"]:
+        return COLORE_ITALIA
     if paese in {"EU", "OECD"}:
         return COLORE_EU27
     return COLORE_PRINCIPALE

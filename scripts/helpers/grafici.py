@@ -101,6 +101,14 @@ COLORI_ETA_STOCK = {
 CODICI_AGGREGATI = {"EU27_2020", "EU", "EA20", "EA19"}
 
 
+def colore_paese_confronto(codice, profilo):
+    if codice == profilo["iso3"]:
+        return profilo["colore"]
+    if codice == "ITA":
+        return COLORE_ITALIA
+    return COLORE_PRINCIPALE
+
+
 def cartella_fonte(cartella_output, fonte, sezione=None):
     if fonte == "eurostat" and sezione == "italia":
         return cartella_paese(cartella_output, "ITA", "eurostat")
@@ -381,7 +389,7 @@ def grafico_barre_paesi(
     profilo = profilo_paese(paese_focus)
     dati = dati.sort_values("value", ascending=False)
     figura, asse = plt.subplots(figsize=(12.5, 6))
-    colori = [profilo["colore"] if codice == profilo["iso3"] else COLORE_PRINCIPALE for codice in dati["country_code"]]
+    colori = [colore_paese_confronto(codice, profilo) for codice in dati["country_code"]]
     asse.bar(etichette_paesi_snapshot(dati), dati["value"], color=colori)
     asse.set_title(titolo_snapshot(titolo, dati), fontsize=14, fontweight="bold", loc="left")
     asse.set_ylabel(asse_y)
@@ -865,6 +873,9 @@ def grafico_stock_eta_quote_paesi(frame, cartella_output="outputs/charts", paese
         if etichetta.get_text() == profilo["iso3"]:
             etichetta.set_color(profilo["colore"])
             etichetta.set_fontweight("bold")
+        elif etichetta.get_text() == "ITA":
+            etichetta.set_color(COLORE_ITALIA)
+            etichetta.set_fontweight("bold")
 
     asse.legend(ncol=3, loc="upper center", bbox_to_anchor=(0.5, -0.08), frameon=False)
     aggiungi_footer(figura, dati)
@@ -910,6 +921,7 @@ def grafico_ue_banda(frame, indicatore, nome_file, cartella_output="outputs/char
     serie = prepara_serie_temporale(serie)
     paesi = serie.loc[~serie["country_code"].isin(CODICI_AGGREGATI)]
     focus = serie.loc[serie["country_code"] == profilo["iso3"]]
+    italia = serie.loc[serie["country_code"] == "ITA"]
     eu27 = serie.loc[serie["country_code"] == "EU27_2020"]
     if paesi.empty or focus.empty:
         return None
@@ -919,6 +931,7 @@ def grafico_ue_banda(frame, indicatore, nome_file, cartella_output="outputs/char
         inizio, fine = periodo
         paesi = limita_periodo(paesi, inizio, fine)
         focus = limita_periodo(focus, inizio, fine)
+        italia = limita_periodo(italia, inizio, fine)
         eu27 = limita_periodo(eu27, inizio, fine)
 
     banda = paesi.groupby("data_plot")["value"].agg(["min", "max"]).reset_index()
@@ -947,13 +960,15 @@ def grafico_ue_banda(frame, indicatore, nome_file, cartella_output="outputs/char
     )
     if not eu27.empty:
         asse.plot(eu27["data_plot"], eu27["value"], color=COLORE_EU27, linewidth=2.0, label="EU27")
+    if profilo["iso3"] != "ITA" and not italia.empty:
+        asse.plot(italia["data_plot"], italia["value"], color=COLORE_ITALIA, linewidth=2.1, label="Italia")
     asse.plot(focus["data_plot"], focus["value"], color=profilo["colore"], linewidth=2.4, label=profilo["label"])
     asse.set_title(serie["indicator_name"].iloc[0], fontsize=14, fontweight="bold", loc="left")
     asse.set_ylabel(serie["unit"].iloc[0])
     asse.grid(alpha=0.2)
     formatta_asse_y(asse)
     asse.legend(loc="best", frameon=False)
-    serie_asse = unisci_serie_per_asse([focus, eu27])
+    serie_asse = unisci_serie_per_asse([focus, italia, eu27])
     formatta_asse_date(asse, serie_asse)
     aggiungi_nota_min_max(asse, testo_min_max_ultimo_periodo(summary_min_max))
     aggiungi_footer(figura, serie)
@@ -986,7 +1001,7 @@ def grafico_ue_affordability(frame, cartella_output="outputs/charts", paese_focu
     profilo = profilo_paese(paese_focus)
     ultimi = ultimi.sort_values("value", ascending=False)
     figura, asse = plt.subplots(figsize=(12, 6))
-    colori = [profilo["colore"] if codice == profilo["iso3"] else COLORE_PRINCIPALE for codice in ultimi["country_code"]]
+    colori = [colore_paese_confronto(codice, profilo) for codice in ultimi["country_code"]]
     asse.bar(etichette_paesi_snapshot(ultimi), ultimi["value"], color=colori)
     asse.set_title(titolo_snapshot("UE - tasso di sovraccarico dei costi abitativi", ultimi), fontsize=14, fontweight="bold", loc="left")
     asse.set_ylabel("percentuale popolazione")
@@ -1008,7 +1023,7 @@ def grafico_ue_shortage_proxy(frame, cartella_output="outputs/charts", paese_foc
     profilo = profilo_paese(paese_focus)
     ultimi = ultimi.sort_values("value", ascending=False)
     figura, asse = plt.subplots(figsize=(12, 6))
-    colori = [profilo["colore"] if codice == profilo["iso3"] else COLORE_PRINCIPALE for codice in ultimi["country_code"]]
+    colori = [colore_paese_confronto(codice, profilo) for codice in ultimi["country_code"]]
     asse.bar(etichette_paesi_snapshot(ultimi), ultimi["value"], color=colori)
     asse.set_title(titolo_snapshot("UE - 25-34enni che vivono con i genitori", ultimi), fontsize=14, fontweight="bold", loc="left")
     asse.set_ylabel("percentuale popolazione 25-34")

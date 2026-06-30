@@ -1587,6 +1587,191 @@ def crea_focus_francia(dati, cartella_output="outputs/charts", mostra_progresso=
     return [percorso] if percorso else []
 
 
+def leggi_summary_parigi_milano(cartella_output):
+    percorso_francia = (
+        cartella_summary(cartella_output, "francia", "mappe")
+        / "francia_comuni_affitti_vendita_reddito.csv"
+    )
+    percorso_italia = (
+        cartella_summary(cartella_output, "italia_locale")
+        / "focus_locale_base_capoluoghi_provincia_omi_mef.csv"
+    )
+    if not percorso_francia.exists() or not percorso_italia.exists():
+        return pd.DataFrame()
+
+    francia = pd.read_csv(percorso_francia, dtype={"codice_area": str})
+    italia = pd.read_csv(percorso_italia)
+    parigi = francia.loc[francia["codice_area"].astype(str) == "75056"].copy()
+    milano = italia.loc[
+        (italia["comune"].astype(str).str.lower() == "milano")
+        & (italia["provincia"].astype(str).str.upper() == "MI")
+    ].copy()
+    if parigi.empty or milano.empty:
+        return pd.DataFrame()
+
+    riga_parigi = parigi.iloc[0]
+    riga_milano = milano.iloc[0]
+    metriche = [
+        ("affitto_mq_mese", "Affitto mensile", "euro/mq/mese", False, 1),
+        ("prezzo_mq", "Prezzo di vendita", "euro/mq", False, 0),
+        ("affitto_40mq_su_reddito_pct", "Affitto 40 mq sul reddito", "% del reddito annuo", True, 1),
+        ("anni_reddito_per_80mq", "Acquisto 80 mq sul reddito", "anni di reddito annuo", False, 1),
+    ]
+    colonne_milano = {
+        "affitto_mq_mese": "affitto_mq_mese_mediano",
+        "prezzo_mq": "prezzo_mq_mediano",
+        "affitto_40mq_su_reddito_pct": "affitto_40mq_su_reddito_pct",
+        "anni_reddito_per_80mq": "anni_reddito_per_80mq",
+    }
+    righe = []
+    for codice, metrica, unita, percentuale, decimali in metriche:
+        valore_parigi = pd.to_numeric(pd.Series([riga_parigi.get(codice)]), errors="coerce").iloc[0]
+        valore_milano = pd.to_numeric(pd.Series([riga_milano.get(colonne_milano[codice])]), errors="coerce").iloc[0]
+        righe.extend(
+            [
+                {
+                    "citta": "Parigi",
+                    "paese": "Francia",
+                    "metrica": metrica,
+                    "codice_metrica": codice,
+                    "value": valore_parigi,
+                    "unita": unita,
+                    "percentuale": percentuale,
+                    "decimali": decimali,
+                    "fonte_prezzo": riga_parigi.get("fonte_prezzo", ""),
+                    "fonte_affitto": riga_parigi.get("fonte_affitto", ""),
+                    "fonte_reddito": riga_parigi.get("fonte_reddito", ""),
+                    "periodo": f"affitti 2025, redditi {formatta_anno(riga_parigi.get('anno_reddito', ''))}",
+                },
+                {
+                    "citta": "Milano",
+                    "paese": "Italia",
+                    "metrica": metrica,
+                    "codice_metrica": codice,
+                    "value": valore_milano,
+                    "unita": unita,
+                    "percentuale": percentuale,
+                    "decimali": decimali,
+                    "fonte_prezzo": "Agenzia Entrate - OMI",
+                    "fonte_affitto": "Agenzia Entrate - OMI",
+                    "fonte_reddito": "MEF Dipartimento Finanze",
+                    "periodo": (
+                        f"OMI {formatta_semestre_locale(riga_milano.get('semestre_omi', ''))}, "
+                        f"redditi {formatta_anno(riga_milano.get('anno_redditi_mef', ''))}"
+                    ),
+                },
+            ]
+        )
+
+    return pd.DataFrame(righe)
+
+
+def formatta_anno(valore):
+    numero = pd.to_numeric(pd.Series([valore]), errors="coerce").iloc[0]
+    if pd.isna(numero):
+        return ""
+    return str(int(numero))
+
+
+def formatta_semestre_locale(valore):
+    testo = str(valore).strip()
+    if testo.endswith(".0"):
+        testo = testo[:-2]
+    if len(testo) == 5 and testo.isdigit():
+        return f"{testo[:4]}-S{testo[-1]}"
+    return testo
+
+
+def crea_confronto_parigi_milano(cartella_output="outputs/charts"):
+    dati = leggi_summary_parigi_milano(cartella_output)
+    if dati.empty:
+        return None
+
+    percorso_summary = (
+        cartella_summary(cartella_output, "francia", "focus")
+        / "parigi_milano_confronto_affitti_vendita_reddito.csv"
+    )
+    dati.to_csv(percorso_summary, index=False)
+
+    profilo_francia = profilo_paese("FRA")
+    profilo_italia = profilo_paese("ITA")
+    colori = {"Parigi": profilo_francia["colore"], "Milano": profilo_italia["colore"]}
+    ordine_metriche = dati.drop_duplicates("codice_metrica")
+
+    figura, assi = plt.subplots(2, 2, figsize=(10.8, 7.2))
+    for asse, metrica in zip(assi.flatten(), ordine_metriche.itertuples(index=False)):
+        valori = dati.loc[dati["codice_metrica"] == metrica.codice_metrica].copy()
+        valori["value"] = pd.to_numeric(valori["value"], errors="coerce")
+        valori = valori.dropna(subset=["value"])
+        if valori.empty:
+            asse.axis("off")
+            continue
+
+        barre = asse.bar(
+            valori["citta"],
+            valori["value"],
+            color=[colori.get(citta, COLORE_PRINCIPALE) for citta in valori["citta"]],
+            width=0.55,
+        )
+        asse.set_title(metrica.metrica, loc="left", fontsize=11.5, fontweight="bold")
+        asse.set_ylabel(metrica.unita, fontsize=9.2)
+        asse.grid(axis="y", alpha=0.22)
+        asse.spines["top"].set_visible(False)
+        asse.spines["right"].set_visible(False)
+        if metrica.percentuale:
+            asse.yaxis.set_major_formatter(FuncFormatter(lambda valore, posizione: f"{valore:.0f}%"))
+        else:
+            formatter = ScalarFormatter(useOffset=False)
+            formatter.set_scientific(False)
+            asse.yaxis.set_major_formatter(formatter)
+        limite = valori["value"].max() * 1.22 if valori["value"].max() > 0 else 1
+        asse.set_ylim(0, limite)
+        for barra, valore in zip(barre, valori["value"]):
+            testo = etichetta_valore(
+                valore,
+                percentuale=metrica.percentuale,
+                decimali=int(metrica.decimali),
+            )
+            asse.text(
+                barra.get_x() + barra.get_width() / 2,
+                valore + limite * 0.025,
+                testo,
+                ha="center",
+                va="bottom",
+                fontsize=9.4,
+            )
+
+    periodi = dati.drop_duplicates("citta")[["citta", "periodo"]]
+    nota_periodi = "; ".join(f"{riga.citta}: {riga.periodo}" for riga in periodi.itertuples(index=False))
+    figura.suptitle(
+        "Parigi e Milano: affitto, acquisto e rapporto al reddito",
+        x=0.01,
+        y=0.98,
+        ha="left",
+        fontsize=16,
+        fontweight="bold",
+    )
+    figura.text(0.01, 0.91, nota_periodi, ha="left", va="top", fontsize=8.7, color="#333333")
+    fonte = (
+        "data.gouv.fr: DVF stats whole period, Carte des loyers 2025, niveau de vie median; "
+        "ISTAT, Agenzia Entrate - OMI, MEF Dipartimento Finanze"
+    )
+    figura.text(
+        0.01,
+        0.01,
+        fonte_su_piu_righe(fonte),
+        ha="left",
+        va="bottom",
+        fontsize=7.8,
+        color="#333333",
+    )
+    plt.tight_layout(rect=[0, 0.08, 1, 0.86])
+    percorso = cartella_paese(cartella_output, "FRA", "focus") / "parigi_milano_confronto_affitti_vendita_reddito.png"
+    figura.savefig(percorso, dpi=170)
+    plt.close(figura)
+    return percorso
+
+
 def crea_focus_germania(dati, cartella_output="outputs/charts", mostra_progresso=False):
     if mostra_progresso:
         print("[Focus Germania] Creo focus Berlino.", flush=True)

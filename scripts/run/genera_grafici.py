@@ -12,7 +12,7 @@ from scripts.helpers.grafici_europei import crea_grafici_europei
 from scripts.helpers.grafici_locali_italia import crea_grafici_locali_italia
 from scripts.helpers.grafici_oecd import crea_grafici_oecd
 from scripts.helpers.grafici_oecd_affordable import crea_grafici_oecd_affordable
-from scripts.helpers.mappe_focus_europa import crea_mappe_e_focus_europa
+from scripts.helpers.mappe_focus_europa import crea_confronto_parigi_milano, crea_mappe_e_focus_europa
 from scripts.helpers.borsino import BORSINO_TIPO_ABITAZIONI_CIVILI, crea_grafici_borsino_italia
 from scripts.helpers.affitti_brevi import PROFILI_AFFITTI_BREVI, crea_affitti_brevi_italia
 from scripts.helpers.paesi import (
@@ -69,6 +69,12 @@ def codici_unici(codici):
     return risultato
 
 
+def aggiungi_italia_contesto(codici):
+    if not codici or "ITA" in codici:
+        return codici
+    return codici_unici(codici + ["ITA"])
+
+
 def risolvi_paesi_run(codici):
     richiesti = []
     paesi_eurostat = []
@@ -102,12 +108,20 @@ def risolvi_paesi_run(codici):
         if codice in {"ITA", "FRA", "DEU"}:
             paesi_locali.append(codice)
 
-    return (
-        codici_unici(richiesti),
-        codici_unici(paesi_eurostat),
-        codici_unici(paesi_oecd),
-        codici_unici(paesi_locali),
-    )
+    richiesti = codici_unici(richiesti)
+    paesi_eurostat = aggiungi_italia_contesto(codici_unici(paesi_eurostat))
+    paesi_oecd = aggiungi_italia_contesto(codici_unici(paesi_oecd))
+    paesi_locali = codici_unici(paesi_locali)
+    if "FRA" in paesi_locali and "ITA" not in paesi_locali:
+        paesi_locali.append("ITA")
+    if ("ITA" in paesi_eurostat or "ITA" in paesi_oecd or "ITA" in paesi_locali) and "ITA" not in richiesti:
+        richiesti.append("ITA")
+
+    return richiesti, paesi_eurostat, paesi_oecd, paesi_locali
+
+
+def deve_creare_confronto_parigi_milano(paesi_locali, salta_mappe_focus_estero):
+    return "FRA" in paesi_locali and "ITA" in paesi_locali and not salta_mappe_focus_estero
 
 
 def stampa_paesi_accettati():
@@ -235,6 +249,14 @@ def run(
         )
     elif includi_affitti_brevi:
         print("Salto affitti brevi: la sezione e' disponibile solo quando PAESI include ITA.", flush=True)
+
+    if deve_creare_confronto_parigi_milano(paesi_locali, salta_mappe_focus_estero):
+        print("Creo il confronto locale Parigi-Milano.", flush=True)
+        percorso = crea_confronto_parigi_milano(output)
+        if percorso:
+            percorsi.append(percorso)
+        else:
+            print("Confronto Parigi-Milano non creato: dati locali insufficienti.", flush=True)
 
     print("Grafici creati:")
     for percorso in percorsi:

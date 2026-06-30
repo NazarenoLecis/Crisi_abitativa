@@ -87,7 +87,7 @@ EUROSTAT_INDICATORS = [
         "frequency": "A",
         "source": "Eurostat affordable housing",
         "theme": "affordability",
-        "filters": {"freq": "A", "hhtyp": "TOTAL", "incgrp": "TOTAL", "unit": "PC"},
+        "filters": {"freq": "A", "hhcomp": "TOTAL", "rskpovth": "TOTAL", "unit": "PC"},
     },
     {
         "indicator_id": "estat_overcrowding_total_pc_a",
@@ -97,7 +97,7 @@ EUROSTAT_INDICATORS = [
         "frequency": "A",
         "source": "Eurostat affordable housing",
         "theme": "shortage_proxy",
-        "filters": {"freq": "A", "unit": "PC", "incgrp": "TOTAL", "age": "TOTAL", "sex": "T"},
+        "filters": {"freq": "A", "unit": "PC", "rskpovth": "TOTAL", "age": "TOTAL", "sex": "T"},
     },
     {
         "indicator_id": "estat_severe_housing_deprivation_total_a",
@@ -117,7 +117,14 @@ EUROSTAT_INDICATORS = [
         "frequency": "A",
         "source": "Eurostat affordable housing",
         "theme": "qualita_stock",
-        "filters": {"freq": "A", "hhtyp": "TOTAL", "incgrp": "TOTAL", "unit": "PC", "sex": "T", "age": "TOTAL"},
+        "filters": {
+            "freq": "A",
+            "hhcomp": "TOTAL",
+            "rskpovth": "TOTAL",
+            "unit": "PC",
+            "sex": "T",
+            "age": "TOTAL",
+        },
     },
     {
         "indicator_id": "estat_inability_keep_home_warm_total_a",
@@ -127,7 +134,7 @@ EUROSTAT_INDICATORS = [
         "frequency": "A",
         "source": "Eurostat affordable housing",
         "theme": "qualita_stock",
-        "filters": {"freq": "A", "hhtyp": "TOTAL", "incgrp": "TOTAL", "unit": "PC"},
+        "filters": {"freq": "A", "hhcomp": "TOTAL", "rskpovth": "TOTAL", "unit": "PC"},
     },
     {
         "indicator_id": "estat_young_living_with_parents_25_34_a",
@@ -271,7 +278,14 @@ EUROSTAT_INDICATORS = [
         "frequency": "A",
         "source": "Eurostat",
         "theme": "affordability",
-        "filters": {"freq": "A", "unit": "PC", "indic_il": "LI_R_MD60", "sex": "T", "age": "TOTAL"},
+        "filters": {
+            "freq": "A",
+            "unit": "PC",
+            "statinfo": "MED_EI",
+            "rskpovth": "B_60",
+            "sex": "T",
+            "age": "TOTAL",
+        },
     },
     {
         "indicator_id": "estat_dwellings_total_2021",
