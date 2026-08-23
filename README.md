@@ -295,7 +295,7 @@ Output:
 
 ### Payload nazionale extra per la dashboard web
 
-La dashboard web usa gia' i JSON Eurostat, OMI e MEF per confronto europeo, stock abitativo e focus locale. Per avere anche i driver nazionali utili nelle live, senza trasformare la pagina in un articolo, il comando:
+La dashboard web usa gia' i JSON Eurostat, OMI e MEF per confronto europeo, stock abitativo e focus locale. Per aggiungere snapshot Eurostat confrontabili e driver nazionali specifici, senza trasformare la pagina in un articolo, il comando:
 
 ```bash
 python3 scripts/run/esporta_dashboard_nazionale.py
@@ -307,8 +307,8 @@ genera:
 
 Il payload contiene moduli compatti per KPI e grafici su:
 
-- titolo di godimento dell'abitazione e peso relativo dell'affitto;
-- abitazioni occupate e non occupate dal censimento Eurostat 2021;
+- titolo di godimento dell'abitazione e peso relativo dell'affitto, con confronto tra paesi UE ed EU27;
+- abitazioni occupate e non occupate dal censimento Eurostat 2021, con confronto tra paesi UE ed EU27;
 - sfratti 2024;
 - ERP/social housing e patrimonio ERP da ristrutturare;
 - student housing e target PNRR;

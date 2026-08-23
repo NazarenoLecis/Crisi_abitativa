@@ -21,6 +21,42 @@ OECD_AHD_BASE_URL = "https://webfs.oecd.org/Els-com/Affordable_Housing_Database"
 
 SFRATTI_ITALIA = RADICE_PROGETTO / "italia" / "sfratti" / "sfratti_italia_2024.csv"
 
+EU27_GEOS = [
+    "AT",
+    "BE",
+    "BG",
+    "CY",
+    "CZ",
+    "DE",
+    "DK",
+    "EE",
+    "EL",
+    "ES",
+    "FI",
+    "FR",
+    "HR",
+    "HU",
+    "IE",
+    "IT",
+    "LT",
+    "LU",
+    "LV",
+    "MT",
+    "NL",
+    "PL",
+    "PT",
+    "RO",
+    "SE",
+    "SI",
+    "SK",
+    "EU27_2020",
+]
+
+GEO_LABEL_FALLBACK = {
+    "IT": "Italia",
+    "EU27_2020": "EU27",
+}
+
 
 def richiesta_get(url, **kwargs):
     headers = kwargs.pop("headers", {})
@@ -87,6 +123,11 @@ def ultimo_anno(righe, campo_periodo="time"):
     return periodi[-1] if periodi else ""
 
 
+def geo_label(riga):
+    geo = riga.get("geo", "")
+    return GEO_LABEL_FALLBACK.get(geo) or riga.get("geo_label") or geo
+
+
 def records_tenure():
     params = {
         "freq": "A",
@@ -94,10 +135,10 @@ def records_tenure():
         "rskpovth": "TOTAL",
         "hhcomp": "TOTAL",
         "tenure": ["OWN_L", "OWN_NL", "RENT_FR", "RENT_MKT"],
-        "geo": ["IT", "EU27_2020"],
+        "geo": EU27_GEOS,
     }
     righe = eurostat_records("ilc_lvho02", params)
-    anno = ultimo_anno([riga for riga in righe if riga.get("geo") == "IT"])
+    anno = ultimo_anno(righe)
     labels = {
         "OWN_L": "Proprieta' con mutuo",
         "OWN_NL": "Proprieta' senza mutuo",
@@ -106,7 +147,7 @@ def records_tenure():
     }
     ordine = ["OWN_L", "OWN_NL", "RENT_FR", "RENT_MKT"]
     records = []
-    for geo in ["IT", "EU27_2020"]:
+    for geo in EU27_GEOS:
         for codice in ordine:
             riga = next(
                 (
@@ -120,7 +161,9 @@ def records_tenure():
                 continue
             records.append(
                 {
-                    "scope": "Italia" if geo == "IT" else "EU27",
+                    "geo": geo,
+                    "geo_label": geo_label(riga),
+                    "scope": geo_label(riga),
                     "category": labels[codice],
                     "code": codice,
                     "value": riga["value"],
@@ -137,44 +180,74 @@ def records_tenure():
     return {
         "id": "tenure",
         "title": "Proprieta' e mercato dell'affitto",
-        "subtitle": "Titolo di godimento dell'abitazione, Italia vs EU27",
+        "subtitle": "Titolo di godimento dell'abitazione, paesi UE e EU27",
         "chart_type": "stacked_bar",
         "records": records,
         "kpis": [
             {"label": "Persone in affitto", "value": round(quota_affitto, 1), "unit": "%", "period": anno},
             {"label": "Persone in proprieta'", "value": round(quota_proprieta, 1), "unit": "%", "period": anno},
         ],
-        "note": "Mostra perche' il mercato dell'affitto italiano e' piu' stretto della proprieta': la quota in affitto e' minoritaria, quindi shock su pochi segmenti urbani possono diventare molto visibili.",
+        "note": "Mostra la struttura del titolo di godimento con definizioni Eurostat armonizzate: proprieta' e affitto possono essere confrontati tra paesi, non solo letti come dato nazionale isolato.",
         "source": "Eurostat ilc_lvho02",
         "source_url": "https://ec.europa.eu/eurostat/databrowser/view/ilc_lvho02/default/table",
     }
 
 
-def valore_censimento_stock(housing):
-    params = {"freq": "A", "housing": housing, "y_const": "TOTAL", "unit": "NR", "geo": "IT"}
-    righe = eurostat_records("cens_21dwop_r3", params)
-    if not righe:
-        return None, ""
-    riga = righe[-1]
-    return riga["value"], str(riga.get("time", "2021"))
-
-
 def records_stock_attivabile():
-    totale, periodo = valore_censimento_stock("DW")
-    occupate, _ = valore_censimento_stock("DW_OC")
-    non_occupate, _ = valore_censimento_stock("DW_NOC")
-    quota_non_occupate = non_occupate / totale * 100 if totale else None
+    labels = {
+        "DW_OC": "Abitazioni occupate",
+        "DW_NOC": "Abitazioni non occupate",
+    }
+    params = {
+        "freq": "A",
+        "housing": ["DW", "DW_OC", "DW_NOC"],
+        "y_const": "TOTAL",
+        "unit": "NR",
+        "geo": EU27_GEOS,
+    }
+    righe = eurostat_records("cens_21dwop_r3", params)
+    periodo = ultimo_anno(righe) or "2021"
+    records = []
+    for geo in EU27_GEOS:
+        righe_geo = [riga for riga in righe if riga.get("geo") == geo and str(riga.get("time", "")) == periodo]
+        totale_riga = next((riga for riga in righe_geo if riga.get("housing") == "DW"), None)
+        totale = totale_riga["value"] if totale_riga else None
+        if not totale:
+            valori_componenti = [
+                riga["value"] for riga in righe_geo if riga.get("housing") in {"DW_OC", "DW_NOC"}
+            ]
+            totale = sum(valori_componenti) if valori_componenti else None
+        for codice in ["DW_OC", "DW_NOC"]:
+            riga = next((item for item in righe_geo if item.get("housing") == codice), None)
+            if not riga:
+                continue
+            valore = riga["value"]
+            records.append(
+                {
+                    "geo": geo,
+                    "geo_label": geo_label(riga),
+                    "scope": geo_label(riga),
+                    "category": labels[codice],
+                    "code": codice,
+                    "value": valore,
+                    "share_pct": round(valore / totale * 100, 1) if totale else None,
+                    "geo_total": totale,
+                    "unit": "abitazioni",
+                    "period": periodo,
+                }
+            )
+
+    totale_it = next((item.get("geo_total") for item in records if item.get("geo") == "IT" and item.get("geo_total")), None)
+    non_occupate_it = next((item.get("value") for item in records if item.get("geo") == "IT" and item.get("code") == "DW_NOC"), None)
+    quota_non_occupate = non_occupate_it / totale_it * 100 if totale_it else None
     return {
         "id": "stock_activation",
         "title": "Stock esistente e abitazioni non occupate",
-        "subtitle": "Censimento Eurostat 2021",
-        "chart_type": "donut",
-        "records": [
-            {"category": "Abitazioni occupate", "value": occupate, "unit": "abitazioni", "period": periodo},
-            {"category": "Abitazioni non occupate", "value": non_occupate, "unit": "abitazioni", "period": periodo},
-        ],
+        "subtitle": "Censimento Eurostat 2021, paesi UE e EU27",
+        "chart_type": "stacked_bar",
+        "records": records,
         "kpis": [
-            {"label": "Stock totale", "value": totale, "unit": "abitazioni", "period": periodo},
+            {"label": "Stock totale", "value": totale_it, "unit": "abitazioni", "period": periodo},
             {
                 "label": "Quota non occupata",
                 "value": round(quota_non_occupate, 1) if quota_non_occupate is not None else None,
@@ -182,7 +255,7 @@ def records_stock_attivabile():
                 "period": periodo,
             },
         ],
-        "note": "Il dato non dice che tutte le abitazioni non occupate siano immediatamente disponibili: e' una misura del potenziale e del mismatch tra stock fisico e offerta effettiva.",
+        "note": "Il dato non dice che tutte le abitazioni non occupate siano immediatamente disponibili: e' una misura comparabile del potenziale e del mismatch tra stock fisico e offerta effettiva.",
         "source": "Eurostat census 2021, cens_21dwop_r3",
         "source_url": "https://ec.europa.eu/eurostat/databrowser/view/cens_21dwop_r3/default/table",
     }
@@ -523,12 +596,12 @@ def build_payload():
         records_policy_mix(),
     ]
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "title": "Crisi abitativa - moduli nazionali extra per dashboard",
         "description": (
-            "Payload compatto per integrare nella dashboard i driver nazionali non gia' coperti "
-            "dai grafici Eurostat/OMI/MEF principali."
+            "Payload compatto per integrare nella dashboard snapshot Eurostat confrontabili "
+            "e driver nazionali non coperti dai grafici Eurostat/OMI/MEF principali."
         ),
         "coverage_tags": [
             "affordability",
