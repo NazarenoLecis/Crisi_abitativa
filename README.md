@@ -50,6 +50,7 @@ python3 -m scripts.run.genera_grafici
 | Solo mappe e focus Francia/Germania | `scripts/run/mappe_focus_europa.py` | Mappe locali e focus Parigi/Berlino |
 | Solo affitti brevi Italia | `scripts/run/affitti_brevi_italia.py` | CSV, classifiche e mappe dal registro CIN |
 | Solo sfratti Italia | `scripts/run/aggiorna_sfratti_italia.py` | CSV 2024 per Italia, regioni, province e serie storica nazionale |
+| Payload nazionale extra per dashboard | `scripts/run/esporta_dashboard_nazionale.py` | JSON leggero con moduli dashboard-ready su affitto, stock, sfratti, ERP/social housing, studentati, affitti brevi e policy mix |
 | Solo Borsino | `scripts/run/focus_borsino_italia.py` | Focus opzionale con API Borsino |
 | Vedere dati OECD disponibili | `scripts/run/estrai_ocse.py` | Tabelle a terminale, non grafici |
 | Confrontare valori OECD a terminale | `scripts/run/analisi_paesi.py` | Tabelle a terminale, non grafici |
@@ -292,6 +293,34 @@ Output:
 - `outputs/italia/charts/affitti_brevi/mappe_comunali/`
 - `outputs/italia/summary/affitti_brevi/`
 
+### Payload nazionale extra per la dashboard web
+
+La dashboard web usa gia' i JSON Eurostat, OMI e MEF per confronto europeo, stock abitativo e focus locale. Per avere anche i driver nazionali utili nelle live, senza trasformare la pagina in un articolo, il comando:
+
+```bash
+python3 scripts/run/esporta_dashboard_nazionale.py
+```
+
+genera:
+
+- `outputs/dashboard/crisi-abitativa/dashboard_extra.json`
+
+Il payload contiene moduli compatti per KPI e grafici su:
+
+- titolo di godimento dell'abitazione e peso relativo dell'affitto;
+- abitazioni occupate e non occupate dal censimento Eurostat 2021;
+- sfratti 2024;
+- ERP/social housing e patrimonio ERP da ristrutturare;
+- student housing e target PNRR;
+- registro CIN/BDSR per affitti brevi e ricettivo;
+- policy mix da incrociare con i grafici gia' presenti in dashboard.
+
+Il JSON e' pensato per essere copiato nel repo `nazarenolecis-data-pipeline` e pubblicato su Cloudflare R2 come:
+
+```text
+crisi-abitativa/dashboard_extra.json
+```
+
 ## Mappe e Focus Francia/Germania
 
 Le mappe estere producono affitti, valori di vendita dove disponibili e rapporti al reddito.
@@ -355,6 +384,7 @@ Output:
 - `scripts/run/mappe_focus_europa.py`: produzione delle mappe e dei focus locali esteri.
 - `scripts/run/focus_borsino_italia.py`: produzione del focus locale aggiuntivo Borsino.
 - `scripts/run/affitti_brevi_italia.py`: produzione della sezione affitti brevi dal registro CIN.
+- `scripts/run/esporta_dashboard_nazionale.py`: export del payload nazionale extra usato dalla dashboard web.
 
 ## Fonti
 
