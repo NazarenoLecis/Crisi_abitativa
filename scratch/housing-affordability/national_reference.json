@@ -7,5 +7,7 @@
   "municipalities_with_mef_weight": 7363,
   "contributor_weighted_rent_pct": 9.401111094552116,
   "contributor_weighted_purchase_years": 1.9840012468090609,
-  "contributor_share_matched_mef": 1.0
+  "national_taxpayers_in_mef": 42827996.0,
+  "covered_taxpayers": 41367996.0,
+  "contributor_share_matched_mef": 0.9659101490529699
 }
