@@ -1,0 +1,122 @@
+name: Housing OMI-MEF verification (temporary branch)
+on:
+  push:
+    branches:
+      - chatgpt/housing-affordability-20261020
+permissions:
+  contents: write
+jobs:
+  extract-housing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install original-project dependencies
+        run: python -m pip install pandas numpy matplotlib requests openpyxl
+      - name: Retrieve regional dashboard data and original ISTAT/MEF data
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import unicodedata
+          import pandas as pd
+          import requests
+          from scripts.helpers.grafici_locali_italia import (
+              seleziona_comuni_focus, scarica_redditi_comunali, CAPOLUOGHI_REGIONE
+          )
+
+          root = "https://data.nazarenolecis.com/crisi-abitativa"
+          session = requests.Session()
+          session.headers.update({"User-Agent":"NazarenoLecis-Research/1.0"})
+
+          def fetch_json(url):
+              response = session.get(url,timeout=150)
+              response.raise_for_status()
+              return response.json()
+
+          idx = fetch_json(root+"/local_index.json")
+          listed = idx["regions"]
+          print("Regions in source index:",len(listed),flush=True)
+          records=[]
+          errors=[]
+          for reg in listed:
+              try:
+                  name=reg["file"]
+                  obj=fetch_json(root+"/regions/"+name)
+                  rows=obj.get("records",[])
+                  records.extend(rows)
+                  print("Region",name,"records",len(rows),flush=True)
+              except Exception as exc:
+                  errors.append(str(reg.get("file"))+": "+str(exc))
+          if len(listed)<20 or len(records)<6000 or errors:
+              raise RuntimeError("Insufficient all-Italy region coverage: "+str([len(listed),len(records),errors]))
+          df=pd.DataFrame(records)
+          for key in ("income_mean","rent_median","sale_median"):
+              df[key]=pd.to_numeric(df[key],errors="coerce")
+          df["purchase_years_40"]=40*df.sale_median/df.income_mean
+          df["rent_income_pct_40"]=40*12*100*df.rent_median/df.income_mean
+          df.loc[df.income_mean<=0,["purchase_years_40","rent_income_pct_40"]]=float("nan")
+          df=df.dropna(subset=["rent_income_pct_40","purchase_years_40"])
+          print("Valid municipalities",len(df),flush=True)
+          if len(df)<5500:
+              raise RuntimeError("Too few valid observations for country reference")
+          # Get the official ISTAT capoluogo flag through original repository functions.
+          cap=seleziona_comuni_focus("capoluoghi-provincia")
+          capdf=pd.DataFrame(cap)[["comune","codice_catastale","regione","provincia"]]
+          capdf=capdf.rename(columns={"comune":"comune_istat"})
+          capcities=capdf.merge(df,on="codice_catastale",how="left",suffixes=("_istat",""))
+          missing=capcities.loc[capcities.rent_income_pct_40.isna(),"comune_istat"].tolist()
+          capcities=capcities.dropna(subset=["rent_income_pct_40","purchase_years_40"])
+          print("Capoluoghi ISTAT:",len(cap),"matched:",len(capcities),"missing:",missing,flush=True)
+          if len(capcities)<95:
+              raise RuntimeError("Too few matched capoluoghi.")
+          regione=df.loc[df["comune"].isin(CAPOLUOGHI_REGIONE)].copy()
+          missing_regionale=CAPOLUOGHI_REGIONE-set(regione.comune)
+          print("Regional capitals found:",len(regione),"missing:",missing_regionale,flush=True)
+          if len(regione)<20:
+              raise RuntimeError("Missing regional capitals: "+str(missing_regionale))
+          # The national baseline uses all municipalities, never a capoluoghi-only mean.
+          ref={
+              "municipalities_n":int(len(df)),
+              "index_updated_at":idx.get("updated_at"),
+              "mean_municipal_rent_pct_unweighted":float(df.rent_income_pct_40.mean()),
+              "mean_municipal_buy_years_unweighted":float(df.purchase_years_40.mean()),
+              "population_weighting":"not available unless MEF contributor counts can be loaded",
+          }
+          try:
+              mef=scarica_redditi_comunali(df.codice_catastale.unique().tolist())
+              j=df.merge(mef[["codice_catastale","contribuenti"]],on="codice_catastale",how="left")
+              j["contribuenti"]=pd.to_numeric(j.contribuenti,errors="coerce")
+              j=j.loc[j.contribuenti>0]
+              ref["municipalities_with_mef_weight"]=len(j)
+              ref["contributor_weighted_rent_pct"]=float(
+                  (j.rent_income_pct_40*j.contribuenti).sum()/j.contribuenti.sum()
+              )
+              ref["contributor_weighted_purchase_years"]=float(
+                  (j.purchase_years_40*j.contribuenti).sum()/j.contribuenti.sum()
+              )
+              ref["contributor_share_matched_mef"]=float(j.contribuenti.sum()/mef.contribuenti.sum())
+              ref["population_weighting"]="tax contributors"
+          except Exception as exc:
+              print("Could not retrieve national taxpayer weights:",str(exc),flush=True)
+              ref["national_weighting_error"]=str(exc)
+          p=Path("scratch/housing-affordability")
+          p.mkdir(parents=True,exist_ok=True)
+          keep=["comune","provincia","regione","codice_catastale","sale_median","rent_median","income_mean",
+                 "purchase_years_40","rent_income_pct_40"]
+          df[keep].to_csv(p/"all_municipalities.csv",index=False)
+          capcities.to_csv(p/"all_capoluoghi.csv",index=False)
+          regione[keep].to_csv(p/"regional_capoluoghi.csv",index=False)
+          (p/"national_reference.json").write_text(json.dumps(ref,ensure_ascii=False,indent=2))
+          print("REFERENCE",ref,flush=True)
+          PY
+      - name: Commit research data to isolated branch (never main)
+        run: |
+          git config user.name "chatgpt-data-research"
+          git config user.email "action@users.noreply.github.com"
+          git add scratch/housing-affordability/
+          git commit -m "Research: observed OMI MEF municipality affordability" || true
+          git push
