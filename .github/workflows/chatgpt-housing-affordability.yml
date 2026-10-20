@@ -15,7 +15,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install original-project dependencies
-        run: python -m pip install pandas numpy matplotlib requests openpyxl
+        run: python -m pip install pandas numpy matplotlib requests openpyxl pycountry
       - name: Retrieve regional dashboard data and original ISTAT/MEF data
         run: |
           python - <<'PY'
