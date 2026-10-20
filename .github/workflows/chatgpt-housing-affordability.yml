@@ -25,7 +25,7 @@ jobs:
           import pandas as pd
           import requests
           from scripts.helpers.grafici_locali_italia import (
-              seleziona_comuni_focus, scarica_redditi_comunali, CAPOLUOGHI_REGIONE
+              seleziona_comuni_focus, scarica_redditi_comunali, CAPOLUOGHI_REGIONE, scarica_comuni_istat, trova_colonna
           )
 
           root = "https://data.nazarenolecis.com/crisi-abitativa"
@@ -98,7 +98,12 @@ jobs:
               ref["contributor_weighted_purchase_years"]=float(
                   (j.purchase_years_40*j.contribuenti).sum()/j.contribuenti.sum()
               )
-              ref["contributor_share_matched_mef"]=float(j.contribuenti.sum()/mef.contribuenti.sum())
+              all_istat=scarica_comuni_istat()
+              cadastral_col=trova_colonna(all_istat,["codice catastale"])
+              mef_all=scarica_redditi_comunali(all_istat[cadastral_col].astype(str).tolist())
+              ref["national_taxpayers_in_mef"]=float(mef_all.contribuenti.sum())
+              ref["covered_taxpayers"]=float(j.contribuenti.sum())
+              ref["contributor_share_matched_mef"]=float(j.contribuenti.sum()/mef_all.contribuenti.sum())
               ref["population_weighting"]="tax contributors"
           except Exception as exc:
               print("Could not retrieve national taxpayer weights:",str(exc),flush=True)
