@@ -1,0 +1,11 @@
+{
+  "municipalities_n": 7363,
+  "index_updated_at": "2026-06-30",
+  "mean_municipal_rent_pct_unweighted": 6.916689421315897,
+  "mean_municipal_buy_years_unweighted": 1.5108169988161073,
+  "population_weighting": "tax contributors",
+  "municipalities_with_mef_weight": 7363,
+  "contributor_weighted_rent_pct": 9.401111094552116,
+  "contributor_weighted_purchase_years": 1.9840012468090609,
+  "contributor_share_matched_mef": 1.0
+}
